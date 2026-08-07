@@ -6,7 +6,9 @@ import { BaseDeDatos } from "../types";
  * leyendo el Google Sheets real.
  */
 export async function fetchHeladerias(): Promise<BaseDeDatos> {
-  const dataSource = "/data/heladerias_prod.json";
+  const base = import.meta.env.BASE_URL || "/";
+  const dataSource = `${base}data/heladerias_prod.json`.replace(/\/+/g, "/");
+
 
   try {
     const response = await fetch(dataSource);
