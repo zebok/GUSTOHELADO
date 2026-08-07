@@ -6,11 +6,13 @@ import { Compass } from "lucide-react";
 interface ResultsListProps {
   results: ResultadoRankeado[];
   selectedAntojos: Antojo[];
+  onVerInsights: (nombre: string) => void;
 }
 
 export const ResultsList: React.FC<ResultsListProps> = ({
   results,
   selectedAntojos,
+  onVerInsights,
 }) => {
   if (results.length === 0) {
     return (
@@ -20,7 +22,9 @@ export const ResultsList: React.FC<ResultsListProps> = ({
         <p className="text-sm text-slate-400 max-w-sm mx-auto">
           No hay heladerías con calificaciones en{" "}
           <strong className="text-slate-600">
-            {selectedAntojos.map(a => a.toLowerCase()).join(", ")}
+            {selectedAntojos.length > 0
+              ? selectedAntojos.map((a) => a.toLowerCase()).join(", ")
+              : "ninguna categoría"}
           </strong>{" "}
           dentro del radio seleccionado.
         </p>
@@ -46,6 +50,7 @@ export const ResultsList: React.FC<ResultsListProps> = ({
             result={res}
             rank={index + 1}
             selectedAntojos={selectedAntojos}
+            onVerInsights={onVerInsights}
           />
         ))}
       </div>

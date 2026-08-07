@@ -1,10 +1,38 @@
 import React, { useMemo, useState } from "react";
 import { Heladeria, Ocurrencia, MacroCategoria } from "../../types";
-import { Trophy, Star, TrendingUp, Calendar, Repeat, Hash, ChevronDown } from "lucide-react";
+import { Trophy, Star, TrendingUp, Calendar, Repeat, Hash, ChevronDown, RefreshCw } from "lucide-react";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+} from "chart.js";
+import { Line, Bar } from "react-chartjs-2";
+
+// Registrar componentes de Chart.js
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 interface KpisViewProps {
   heladerias: Heladeria[];
   ocurrencias: Ocurrencia[];
+  selectedHeladeriaFilter: string;
+  onHeladeriaFilterChange: (nombre: string) => void;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
@@ -75,18 +103,31 @@ const MiniBar: React.FC<{ label: string; value: number; max: number; sub?: strin
   </div>
 );
 
-export const KpisView: React.FC<KpisViewProps> = ({ ocurrencias = [] }) => {
+export const KpisView: React.FC<KpisViewProps> = ({
+  ocurrencias = [],
+  selectedHeladeriaFilter,
+  onHeladeriaFilterChange,
+}) => {
   const [selectedCategory, setSelectedCategory] = useState<string>("TODAS");
 
-  // Filtro reactivo en el frontend
+  // Filtro reactivo en el frontend (combina Categoría y Heladería)
   const filteredOcurrencias = useMemo(() => {
-    if (selectedCategory === "TODAS") return ocurrencias;
-    return ocurrencias.filter((o) => o.macrocategoria === selectedCategory);
-  }, [ocurrencias, selectedCategory]);
+    return ocurrencias.filter((o) => {
+      const matchCat = selectedCategory === "TODAS" || o.macrocategoria === selectedCategory;
+      const matchHel = selectedHeladeriaFilter === "TODAS" || o.heladeria_nombre === selectedHeladeriaFilter;
+      return matchCat && matchHel;
+    });
+  }, [ocurrencias, selectedCategory, selectedHeladeriaFilter]);
 
   // Lista de categorías únicas para el filtro
   const categoriasFiltro = useMemo(() => {
     const set = new Set(ocurrencias.map((o) => o.macrocategoria).filter(Boolean));
+    return Array.from(set).sort();
+  }, [ocurrencias]);
+
+  // Lista de heladerías únicas para el filtro
+  const heladeriasFiltro = useMemo(() => {
+    const set = new Set(ocurrencias.map((o) => o.heladeria_nombre).filter(Boolean));
     return Array.from(set).sort();
   }, [ocurrencias]);
 
@@ -185,11 +226,95 @@ export const KpisView: React.FC<KpisViewProps> = ({ ocurrencias = [] }) => {
     };
   }, [filteredOcurrencias]);
 
+  // ── Datos para Gráficos (ChartJS) ──────────────────────────────────────────
+
+  // 1. Gráfico de Evolución de Visitas (Línea)
+  const visitasPorMesChartData = useMemo(() => {
+    if (!stats || stats.evolucion.length === 0) return null;
+    const labels = stats.evolucion.map((m) => {
+      const [year, month] = m.mes.split("-");
+      return `${MESES[parseInt(month) - 1]} ${year.slice(2)}`;
+    });
+    const data = stats.evolucion.map((m) => m.visitas);
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: "Degustaciones por mes",
+          data,
+          borderColor: "rgb(30, 41, 59)", // slate-800
+          backgroundColor: "rgba(30, 41, 59, 0.04)",
+          fill: true,
+          tension: 0.25,
+          borderWidth: 2,
+          pointBackgroundColor: "rgb(30, 41, 59)",
+          pointRadius: 4,
+        },
+      ],
+    };
+  }, [stats]);
+
+  // 2. Gráfico de Calificaciones por Categoría (Barras)
+  const scorePorCategoriaChartData = useMemo(() => {
+    const cats: MacroCategoria[] = ["CHOCOLATE", "DULCE DE LECHE", "CREMA", "FRUTA", "AUTOR"];
+    const data = cats.map((cat) => {
+      const os = filteredOcurrencias.filter((o) => o.macrocategoria === cat);
+      return os.length > 0 ? parseFloat(avg(os.map((o) => o.puntaje_general)).toFixed(1)) : 0;
+    });
+
+    return {
+      labels: cats.map((c) => CAT_LABELS[c]),
+      datasets: [
+        {
+          label: "Calificación Promedio",
+          data,
+          backgroundColor: "rgba(71, 85, 105, 0.2)", // slate-600
+          borderColor: "rgb(71, 85, 105)",
+          borderWidth: 1.5,
+          borderRadius: 6,
+          barPercentage: 0.5,
+        },
+      ],
+    };
+  }, [filteredOcurrencias]);
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false,
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          stepSize: 2,
+        },
+      },
+    },
+  };
+
+  const barChartOptions = {
+    ...chartOptions,
+    scales: {
+      y: {
+        beginAtZero: true,
+        max: 10,
+        ticks: {
+          stepSize: 2,
+        },
+      },
+    },
+  };
+
   return (
     <div className="space-y-6">
       
-      {/* Header & Filtro */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* Header & Filtros */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-900">Análisis</h2>
           <p className="text-sm text-slate-500 mt-0.5">
@@ -197,21 +322,56 @@ export const KpisView: React.FC<KpisViewProps> = ({ ocurrencias = [] }) => {
           </p>
         </div>
 
-        {/* Dropdown Filtro Reactivo */}
-        <div className="relative shrink-0">
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="appearance-none pl-3 pr-8 py-2 text-xs font-medium border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-200 cursor-pointer min-w-[160px]"
-          >
-            <option value="TODAS">Todas las categorías</option>
-            {categoriasFiltro.map((cat) => (
-              <option key={cat} value={cat}>
-                {CAT_LABELS[cat] ?? cat}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+        {/* Controles de Filtros */}
+        <div className="flex flex-wrap items-center gap-3">
+          
+          {/* Reset Filtros */}
+          {(selectedCategory !== "TODAS" || selectedHeladeriaFilter !== "TODAS") && (
+            <button
+              onClick={() => {
+                setSelectedCategory("TODAS");
+                onHeladeriaFilterChange("TODAS");
+              }}
+              className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 font-medium cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Limpiar filtros
+            </button>
+          )}
+
+          {/* Filtro Heladería */}
+          <div className="relative">
+            <select
+              value={selectedHeladeriaFilter}
+              onChange={(e) => onHeladeriaFilterChange(e.target.value)}
+              className="appearance-none pl-3 pr-8 py-2 text-xs font-medium border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-200 cursor-pointer min-w-[160px]"
+            >
+              <option value="TODAS">Todas las heladerías</option>
+              {heladeriasFiltro.map((hel) => (
+                <option key={hel} value={hel}>
+                  {hel}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+          </div>
+
+          {/* Filtro Categoría */}
+          <div className="relative">
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="appearance-none pl-3 pr-8 py-2 text-xs font-medium border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-200 cursor-pointer min-w-[160px]"
+            >
+              <option value="TODAS">Todas las categorías</option>
+              {categoriasFiltro.map((cat) => (
+                <option key={cat} value={cat}>
+                  {CAT_LABELS[cat] ?? cat}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+          </div>
         </div>
       </div>
 
@@ -224,7 +384,7 @@ export const KpisView: React.FC<KpisViewProps> = ({ ocurrencias = [] }) => {
               icon={<Hash className="w-3.5 h-3.5 text-slate-500" />}
               label="Degustaciones"
               value={stats.total}
-              sub="registradas en esta categoría"
+              sub="registradas en la selección actual"
             />
             <KpiCard
               icon={<Star className="w-3.5 h-3.5 text-slate-500" />}
@@ -239,6 +399,39 @@ export const KpisView: React.FC<KpisViewProps> = ({ ocurrencias = [] }) => {
               value={`${Math.round(stats.tasaVolveria * 100)}%`}
               sub="volvería a pedir el gusto"
             />
+          </div>
+
+          {/* Bloques de Gráficos (ChartJS) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* Gráfico 1: Evolución Temporal */}
+            <div className="panel p-5 space-y-3">
+              <h3 className="font-semibold text-slate-900 text-sm flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-slate-600" />
+                Historial de visitas mensual
+              </h3>
+              <div className="h-60 relative w-full">
+                {visitasPorMesChartData ? (
+                  <Line data={visitasPorMesChartData} options={chartOptions} />
+                ) : (
+                  <div className="h-full flex items-center justify-center text-slate-400 text-xs">
+                    Sin evolución temporal disponible
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Gráfico 2: Calificación por Categoría */}
+            <div className="panel p-5 space-y-3">
+              <h3 className="font-semibold text-slate-900 text-sm flex items-center gap-2">
+                <Star className="w-4 h-4 text-slate-600" />
+                Calificaciones promedio por categoría
+              </h3>
+              <div className="h-60 relative w-full">
+                <Bar data={scorePorCategoriaChartData} options={barChartOptions} />
+              </div>
+            </div>
+
           </div>
 
           {/* Grillas secundarias de Heladerías y Gustos */}
@@ -292,36 +485,10 @@ export const KpisView: React.FC<KpisViewProps> = ({ ocurrencias = [] }) => {
 
           </div>
 
-          {/* Evolución Mensual */}
-          <div className="panel p-5 space-y-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-slate-600" />
-              <h3 className="font-semibold text-slate-900 text-sm">Degustaciones por mes</h3>
-            </div>
-            <div className="space-y-3">
-              {stats.evolucion.map((m) => {
-                const [year, month] = m.mes.split("-");
-                const label = `${MESES[parseInt(month) - 1]} ${year.slice(2)}`;
-                return (
-                  <MiniBar
-                    key={m.mes}
-                    label={label}
-                    value={m.visitas}
-                    max={stats.maxVisitasMes}
-                    sub={`promedio mensual: ${m.avg.toFixed(1)}`}
-                  />
-                );
-              })}
-              {stats.evolucion.length === 0 && (
-                <p className="text-sm text-slate-400 text-center py-4">Sin registros de fechas</p>
-              )}
-            </div>
-          </div>
-
         </div>
       ) : (
         <div className="panel p-8 text-center text-slate-500 text-sm">
-          No hay degustaciones registradas bajo esta categoría.
+          No hay degustaciones registradas para el filtro seleccionado.
         </div>
       )}
 

@@ -10,9 +10,13 @@ import { Compass } from "lucide-react";
 
 interface RecommenderViewProps {
   heladerias: Heladeria[];
+  onVerInsights: (nombre: string) => void;
 }
 
-export const RecommenderView: React.FC<RecommenderViewProps> = ({ heladerias }) => {
+export const RecommenderView: React.FC<RecommenderViewProps> = ({
+  heladerias,
+  onVerInsights,
+}) => {
   const [userLocation, setUserLocation] = useState<Ubicacion | null>(null);
   const [maxDistanceMeters, setMaxDistanceMeters] = useState<number>(1500);
   const [selectedAntojos, setSelectedAntojos] = useState<Antojo[]>(["CHOCOLATE"]);
@@ -86,7 +90,11 @@ export const RecommenderView: React.FC<RecommenderViewProps> = ({ heladerias }) 
       </div>
 
       {userLocation && (
-        <ResultsList results={rankedResults} selectedAntojos={selectedAntojos} />
+        <ResultsList
+          results={rankedResults}
+          selectedAntojos={selectedAntojos}
+          onVerInsights={onVerInsights}
+        />
       )}
     </div>
   );

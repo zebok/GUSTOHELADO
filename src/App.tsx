@@ -16,6 +16,7 @@ export const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showIntro, setShowIntro] = useState(true);
+  const [selectedHeladeriaFilter, setSelectedHeladeriaFilter] = useState<string>("TODAS");
 
   const loadData = async () => {
     setLoading(true);
@@ -74,7 +75,13 @@ export const App: React.FC = () => {
           ) : db ? (
             <div className="animate-fade-in">
               {activeTab === "home" && (
-                <RecommenderView heladerias={db.heladerias} />
+                <RecommenderView
+                  heladerias={db.heladerias}
+                  onVerInsights={(nombre) => {
+                    setSelectedHeladeriaFilter(nombre);
+                    setActiveTab("kpis");
+                  }}
+                />
               )}
               {activeTab === "bbdd" && (
                 <DatasetView
@@ -87,6 +94,8 @@ export const App: React.FC = () => {
                 <KpisView
                   heladerias={db.heladerias}
                   ocurrencias={db.ocurrencias}
+                  selectedHeladeriaFilter={selectedHeladeriaFilter}
+                  onHeladeriaFilterChange={setSelectedHeladeriaFilter}
                 />
               )}
             </div>

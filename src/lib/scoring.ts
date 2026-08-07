@@ -13,7 +13,7 @@ export function rankearHeladerias(
   pesoScore: number = 0.7,
   pesoDistancia: number = 0.3
 ): ResultadoRankeado[] {
-  if (!ubicacion || antojos.length === 0) return [];
+  if (!ubicacion) return [];
 
   const resultados: ResultadoRankeado[] = [];
 
@@ -21,20 +21,24 @@ export function rankearHeladerias(
     // 1. Filtro duro: Solo heladerías activas
     if (!heladeria.activa) continue;
 
-    // 2. Filtro por antojos: Debe tener score histórico para al menos uno de los seleccionados
-    let sumScores = 0;
-    let countScores = 0;
-    for (const a of antojos) {
-      const scoreCategoria = heladeria.scorePorCategoria[a];
-      if (scoreCategoria !== undefined) {
-        sumScores += scoreCategoria;
-        countScores++;
+    // 2. Filtro por antojos o promedio global si no hay ninguno seleccionado
+    let scorePromedio = 0;
+    if (antojos.length > 0) {
+      let sumScores = 0;
+      let countScores = 0;
+      for (const a of antojos) {
+        const scoreCategoria = heladeria.scorePorCategoria[a];
+        if (scoreCategoria !== undefined) {
+          sumScores += scoreCategoria;
+          countScores++;
+        }
       }
+      if (countScores === 0) continue; // No tiene ninguno de los antojos seleccionados
+      scorePromedio = sumScores / countScores;
+    } else {
+      const scores = Object.values(heladeria.scorePorCategoria).filter((s) => s !== undefined) as number[];
+      scorePromedio = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
     }
-
-    if (countScores === 0) continue; // No tiene ninguno de los antojos seleccionados
-
-    const scorePromedio = sumScores / countScores;
 
     // 3. Calcular distancia viva
     const distancia = haversineMetros(

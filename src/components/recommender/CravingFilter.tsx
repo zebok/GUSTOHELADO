@@ -24,9 +24,7 @@ export const CravingFilter: React.FC<CravingFilterProps> = ({
   const handleToggle = (val: Antojo) => {
     const isSelected = selectedAntojos.includes(val);
     if (isSelected) {
-      if (selectedAntojos.length > 1) {
-        onAntojosChange(selectedAntojos.filter((a) => a !== val));
-      }
+      onAntojosChange(selectedAntojos.filter((a) => a !== val));
     } else {
       onAntojosChange([...selectedAntojos, val]);
     }

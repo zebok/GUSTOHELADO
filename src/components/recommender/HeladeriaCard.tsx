@@ -6,12 +6,14 @@ interface HeladeriaCardProps {
   result: ResultadoRankeado;
   rank: number;
   selectedAntojos: Antojo[];
+  onVerInsights: (nombre: string) => void;
 }
 
 export const HeladeriaCard: React.FC<HeladeriaCardProps> = ({
   result,
   rank,
   selectedAntojos,
+  onVerInsights,
 }) => {
   const { heladeria, distanciaMetros, scoreFinal } = result;
   const isTop = rank === 1;
@@ -119,7 +121,12 @@ export const HeladeriaCard: React.FC<HeladeriaCardProps> = ({
           <Footprints className="w-3.5 h-3.5" />
           {distanciaMetros} m
         </span>
-        <span>{heladeria.visitas} visitas</span>
+        <button
+          onClick={() => onVerInsights(heladeria.nombre)}
+          className="text-xs text-slate-500 hover:text-slate-900 underline underline-offset-2 transition-colors cursor-pointer"
+        >
+          Ver insights ({heladeria.visitas} visitas)
+        </button>
       </div>
 
       <div className="flex flex-wrap gap-1.5">
