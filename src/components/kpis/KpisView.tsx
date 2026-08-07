@@ -1,6 +1,6 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Heladeria, Ocurrencia, MacroCategoria } from "../../types";
-import { Trophy, Star, TrendingUp, Calendar, Repeat, Hash, IceCreamCone } from "lucide-react";
+import { Trophy, Star, TrendingUp, Calendar, Repeat, Hash, ChevronDown } from "lucide-react";
 
 interface KpisViewProps {
   heladerias: Heladeria[];
@@ -25,16 +25,16 @@ const MESES = [
   "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
 ];
 
-const CAT_EMOJI: Partial<Record<MacroCategoria, string>> = {
-  CHOCOLATE: "🍫",
-  "DULCE DE LECHE": "🍮",
-  CREMA: "🍦",
-  FRUTA: "🍓",
-  AUTOR: "👨‍🍳",
-  MISC: "🌀",
+const CAT_LABELS: Record<MacroCategoria, string> = {
+  CHOCOLATE: "Chocolate",
+  "DULCE DE LECHE": "Dulce de Leche",
+  CREMA: "Crema",
+  FRUTA: "Fruta",
+  AUTOR: "De Autor",
+  MISC: "Variedades",
 };
 
-// ── Sub-componentes de KPI card ───────────────────────────────────────────
+// ── Sub-componentes ──────────────────────────────────────────────────────
 
 const KpiCard: React.FC<{
   icon: React.ReactNode;
@@ -43,32 +43,31 @@ const KpiCard: React.FC<{
   sub?: string;
   accent?: boolean;
 }> = ({ icon, label, value, sub, accent }) => (
-  <div className={`panel p-5 space-y-2 ${accent ? "border-amber-200 bg-amber-50/30" : ""}`}>
-    <div className={`flex items-center gap-2 text-xs font-semibold uppercase tracking-wide ${accent ? "text-amber-700" : "text-slate-500"}`}>
+  <div className={`panel p-5 space-y-2 ${accent ? "border-slate-300 bg-slate-100/50" : ""}`}>
+    <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
       {icon}
       {label}
     </div>
-    <p className={`text-2xl font-bold tracking-tight leading-none ${accent ? "text-amber-900" : "text-slate-900"}`}>
+    <p className="text-2xl font-bold tracking-tight leading-none text-slate-900">
       {value}
     </p>
     {sub && <p className="text-xs text-slate-400 leading-snug">{sub}</p>}
   </div>
 );
 
-// ── Mini barra horizontal ─────────────────────────────────────────────────
 const MiniBar: React.FC<{ label: string; value: number; max: number; sub?: string; accent?: boolean }> = ({
   label, value, max, sub, accent,
 }) => (
   <div className="space-y-1">
     <div className="flex justify-between items-baseline">
       <span className="text-sm text-slate-700 font-medium truncate">{label}</span>
-      <span className={`text-sm font-mono font-semibold ml-2 ${accent ? "text-amber-700" : "text-slate-600"}`}>
+      <span className={`text-sm font-mono font-semibold ml-2 ${accent ? "text-slate-900" : "text-slate-600"}`}>
         {typeof value === "number" && value % 1 !== 0 ? value.toFixed(1) : value}
       </span>
     </div>
     <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
       <div
-        className={`h-full rounded-full transition-all ${accent ? "bg-amber-400" : "bg-slate-400"}`}
+        className={`h-full rounded-full transition-all ${accent ? "bg-slate-800" : "bg-slate-400"}`}
         style={{ width: `${Math.min((value / max) * 100, 100)}%` }}
       />
     </div>
@@ -76,53 +75,81 @@ const MiniBar: React.FC<{ label: string; value: number; max: number; sub?: strin
   </div>
 );
 
-// ── Componente principal ──────────────────────────────────────────────────
-
 export const KpisView: React.FC<KpisViewProps> = ({ ocurrencias = [] }) => {
-  const stats = useMemo(() => {
+  const [selectedCategory, setSelectedCategory] = useState<string>("TODAS");
+
+  // Filtro reactivo en el frontend
+  const filteredOcurrencias = useMemo(() => {
+    if (selectedCategory === "TODAS") return ocurrencias;
+    return ocurrencias.filter((o) => o.macrocategoria === selectedCategory);
+  }, [ocurrencias, selectedCategory]);
+
+  // Lista de categorías únicas para el filtro
+  const categoriasFiltro = useMemo(() => {
+    const set = new Set(ocurrencias.map((o) => o.macrocategoria).filter(Boolean));
+    return Array.from(set).sort();
+  }, [ocurrencias]);
+
+  // Datos curiosos globales (calculados sobre la totalidad de los datos para ser representativos)
+  const globalCuriosities = useMemo(() => {
     if (ocurrencias.length === 0) return null;
 
-    // Total y score global
-    const total = ocurrencias.length;
-    const scoreGlobal = avg(ocurrencias.map((o) => o.puntaje_general));
-    const tasaVolveria = ocurrencias.filter((o) => o.volveria_a_pedir).length / total;
+    const byCat = groupBy(ocurrencias, (o) => o.macrocategoria);
+    const catStats = Object.entries(byCat).map(([cat, os]) => ({
+      cat: cat as MacroCategoria,
+      visitas: os.length,
+      avg: avg(os.map((o) => o.puntaje_general)),
+    }));
 
-    // Fechas extremas
-    const fechas = ocurrencias.map((o) => o.fecha).filter(Boolean).sort();
+    const catFavorita = [...catStats].sort((a, b) => b.avg - a.avg)[0];
+    const catMasPedida = [...catStats].sort((a, b) => b.visitas - a.visitas)[0];
+
+    const byGusto = groupBy(ocurrencias, (o) => o.gusto);
+    const gustoEstrella = Object.entries(byGusto)
+      .map(([gusto, os]) => ({ gusto, visitas: os.length }))
+      .sort((a, b) => b.visitas - a.visitas)[0];
+
+    return {
+      catFavorita,
+      catMasPedida,
+      gustoEstrella,
+    };
+  }, [ocurrencias]);
+
+  // Estadísticas del subset filtrado
+  const stats = useMemo(() => {
+    if (filteredOcurrencias.length === 0) return null;
+
+    const total = filteredOcurrencias.length;
+    const scoreGlobal = avg(filteredOcurrencias.map((o) => o.puntaje_general));
+    const tasaVolveria = filteredOcurrencias.filter((o) => o.volveria_a_pedir).length / total;
+
+    const fechas = filteredOcurrencias.map((o) => o.fecha).filter(Boolean).sort();
     const primeraFecha = fechas[0];
     const ultimaFecha = fechas[fechas.length - 1];
 
-    // Heladería más visitada
-    const byHel = groupBy(ocurrencias, (o) => o.heladeria_nombre);
+    const byHel = groupBy(filteredOcurrencias, (o) => o.heladeria_nombre);
+    
+    // Heladerías con visitas y promedio
     const helPorVisitas = Object.entries(byHel)
       .map(([nombre, os]) => ({ nombre, visitas: os.length, avg: avg(os.map((o) => o.puntaje_general)) }))
       .sort((a, b) => b.visitas - a.visitas);
     const masVisitada = helPorVisitas[0];
 
-    // Heladería mejor puntuada (mín. 2 visitas para ser representativa)
-    const helPorScore = Object.entries(byHel)
-      .map(([nombre, os]) => ({ nombre, visitas: os.length, avg: avg(os.map((o) => o.puntaje_general)) }))
-      .filter((h) => h.visitas >= 2)
+    // Ordenado por puntuación (mínimo 2 visitas si hay suficientes heladerías)
+    const helPorScoreBase = Object.entries(byHel)
+      .map(([nombre, os]) => ({ nombre, visitas: os.length, avg: avg(os.map((o) => o.puntaje_general)) }));
+    
+    const tieneMultiplesVisitas = helPorScoreBase.filter((h) => h.visitas >= 2).length >= 3;
+    const helPorScore = helPorScoreBase
+      .filter((h) => !tieneMultiplesVisitas || h.visitas >= 2)
       .sort((a, b) => b.avg - a.avg);
-    const mejorPuntuada = helPorScore[0];
 
-    // Top 5 heladerías por score (mín 2 visitas)
     const top5Heladerias = helPorScore.slice(0, 5);
     const maxScoreHel = top5Heladerias[0]?.avg ?? 10;
 
-    // Categoría favorita (más pedida)
-    const byCat = groupBy(ocurrencias, (o) => o.macrocategoria);
-    const catPorVisitas = Object.entries(byCat)
-      .map(([cat, os]) => ({ cat, visitas: os.length, avg: avg(os.map((o) => o.puntaje_general)) }))
-      .sort((a, b) => b.visitas - a.visitas);
-    const catFavorita = catPorVisitas[0];
-
-    // Categoría mejor puntuada
-    const catMejorPuntuada = [...catPorVisitas].sort((a, b) => b.avg - a.avg)[0];
-    const maxVisitasCat = catPorVisitas[0]?.visitas ?? 1;
-
-    // Top 5 gustos
-    const byGusto = groupBy(ocurrencias, (o) => o.gusto);
+    // Top 5 gustos específicos
+    const byGusto = groupBy(filteredOcurrencias, (o) => o.gusto);
     const top5Gustos = Object.entries(byGusto)
       .map(([gusto, os]) => ({ gusto, visitas: os.length, avg: avg(os.map((o) => o.puntaje_general)) }))
       .sort((a, b) => b.visitas - a.visitas)
@@ -130,7 +157,7 @@ export const KpisView: React.FC<KpisViewProps> = ({ ocurrencias = [] }) => {
     const maxVisitasGusto = top5Gustos[0]?.visitas ?? 1;
 
     // Evolución por mes
-    const byMes = groupBy(ocurrencias, (o) => {
+    const byMes = groupBy(filteredOcurrencias, (o) => {
       const d = new Date(o.fecha + "T12:00:00");
       return isNaN(d.getTime()) ? "?" : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     });
@@ -138,201 +165,201 @@ export const KpisView: React.FC<KpisViewProps> = ({ ocurrencias = [] }) => {
       .filter(([k]) => k !== "?")
       .map(([mes, os]) => ({ mes, visitas: os.length, avg: avg(os.map((o) => o.puntaje_general)) }))
       .sort((a, b) => a.mes.localeCompare(b.mes))
-      .slice(-12); // últimos 12 meses
-
-    // Mejor mes (por score promedio, mín 2 visitas)
-    const mejorMes = evolucion
-      .filter((m) => m.visitas >= 2)
-      .sort((a, b) => b.avg - a.avg)[0];
-    const mejorMesLabel = mejorMes
-      ? `${MESES[parseInt(mejorMes.mes.split("-")[1]) - 1]} ${mejorMes.mes.split("-")[0]}`
-      : "—";
+      .slice(-12);
 
     const maxVisitasMes = Math.max(...evolucion.map((m) => m.visitas), 1);
 
     return {
-      total, scoreGlobal, tasaVolveria, primeraFecha, ultimaFecha,
-      masVisitada, mejorPuntuada, top5Heladerias, maxScoreHel,
-      catFavorita, catMejorPuntuada, catPorVisitas, maxVisitasCat,
-      top5Gustos, maxVisitasGusto,
-      evolucion, mejorMes, mejorMesLabel, maxVisitasMes,
+      total,
+      scoreGlobal,
+      tasaVolveria,
+      primeraFecha,
+      ultimaFecha,
+      masVisitada,
+      top5Heladerias,
+      maxScoreHel,
+      top5Gustos,
+      maxVisitasGusto,
+      evolucion,
+      maxVisitasMes,
     };
-  }, [ocurrencias]);
-
-  if (!stats || ocurrencias.length === 0) {
-    return (
-      <div className="h-[50vh] flex flex-col items-center justify-center gap-3 text-center">
-        <IceCreamCone className="w-10 h-10 text-slate-200" />
-        <p className="text-slate-400 text-sm">Todavía no hay datos suficientes para calcular análisis.</p>
-      </div>
-    );
-  }
+  }, [filteredOcurrencias]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      
+      {/* Header & Filtro */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">Análisis</h2>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Degustaciones registradas e indicadores clave del proyecto.
+          </p>
+        </div>
 
-      {/* Header */}
-      <div>
-        <h2 className="text-xl font-bold text-slate-900">Análisis</h2>
-        <p className="text-sm text-slate-500 mt-0.5">
-          {stats.total} degustaciones registradas · desde{" "}
-          {new Date(stats.primeraFecha + "T12:00:00").toLocaleDateString("es-AR")} hasta{" "}
-          {new Date(stats.ultimaFecha + "T12:00:00").toLocaleDateString("es-AR")}
-        </p>
-      </div>
-
-      {/* KPI cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <KpiCard
-          icon={<Hash className="w-3.5 h-3.5" />}
-          label="Total de catas"
-          value={stats.total}
-          sub="ocurrencias registradas"
-        />
-        <KpiCard
-          icon={<Star className="w-3.5 h-3.5" />}
-          label="Score promedio"
-          value={stats.scoreGlobal.toFixed(1)}
-          sub="sobre 10 puntos"
-          accent
-        />
-        <KpiCard
-          icon={<Repeat className="w-3.5 h-3.5" />}
-          label="Volvería a pedir"
-          value={`${Math.round(stats.tasaVolveria * 100)}%`}
-          sub="de las degustaciones"
-        />
-        <KpiCard
-          icon={<Calendar className="w-3.5 h-3.5" />}
-          label="Mejor mes"
-          value={stats.mejorMesLabel}
-          sub={stats.mejorMes ? `${stats.mejorMes.avg.toFixed(1)} de promedio` : ""}
-        />
-      </div>
-
-      {/* Heladerías y Categorías */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {/* Top heladerías por score */}
-        <div className="panel p-5 space-y-4">
-          <div className="flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-amber-500" />
-            <h3 className="font-semibold text-slate-900 text-sm">Top heladerías</h3>
-            <span className="text-xs text-slate-400 ml-1">(≥2 visitas · por score)</span>
-          </div>
-          <div className="space-y-3">
-            {stats.top5Heladerias.map((h, i) => (
-              <MiniBar
-                key={h.nombre}
-                label={`${i + 1}. ${h.nombre}`}
-                value={h.avg}
-                max={stats.maxScoreHel}
-                sub={`${h.visitas} visita${h.visitas !== 1 ? "s" : ""}`}
-                accent={i === 0}
-              />
+        {/* Dropdown Filtro Reactivo */}
+        <div className="relative shrink-0">
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="appearance-none pl-3 pr-8 py-2 text-xs font-medium border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-200 cursor-pointer min-w-[160px]"
+          >
+            <option value="TODAS">Todas las categorías</option>
+            {categoriasFiltro.map((cat) => (
+              <option key={cat} value={cat}>
+                {CAT_LABELS[cat] ?? cat}
+              </option>
             ))}
-          </div>
-        </div>
-
-        {/* Categorías */}
-        <div className="panel p-5 space-y-4">
-          <div className="flex items-center gap-2">
-            <IceCreamCone className="w-4 h-4 text-slate-500" />
-            <h3 className="font-semibold text-slate-900 text-sm">Categorías</h3>
-            <span className="text-xs text-slate-400 ml-1">(por cantidad de pedidos)</span>
-          </div>
-          <div className="space-y-3">
-            {stats.catPorVisitas.map((c, i) => (
-              <MiniBar
-                key={c.cat}
-                label={`${CAT_EMOJI[c.cat as MacroCategoria] ?? ""} ${c.cat}`}
-                value={c.visitas}
-                max={stats.maxVisitasCat}
-                sub={`score prom. ${c.avg.toFixed(1)}`}
-                accent={i === 0}
-              />
-            ))}
-          </div>
+          </select>
+          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
         </div>
       </div>
 
-      {/* Gustos y Evolución */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {stats ? (
+        <div className="space-y-6 animate-fade-in">
+          
+          {/* KPI cards en 3 columnas */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <KpiCard
+              icon={<Hash className="w-3.5 h-3.5 text-slate-500" />}
+              label="Degustaciones"
+              value={stats.total}
+              sub="registradas en esta categoría"
+            />
+            <KpiCard
+              icon={<Star className="w-3.5 h-3.5 text-slate-500" />}
+              label="Puntuación promedio"
+              value={stats.scoreGlobal.toFixed(1)}
+              sub="sobre 10 puntos históricos"
+              accent
+            />
+            <KpiCard
+              icon={<Repeat className="w-3.5 h-3.5 text-slate-500" />}
+              label="Tasa de recompra"
+              value={`${Math.round(stats.tasaVolveria * 100)}%`}
+              sub="volvería a pedir el gusto"
+            />
+          </div>
 
-        {/* Top gustos */}
+          {/* Grillas secundarias de Heladerías y Gustos */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* Top Heladerías */}
+            <div className="panel p-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-slate-600" />
+                <h3 className="font-semibold text-slate-900 text-sm">Puntuación por heladería</h3>
+              </div>
+              <div className="space-y-3">
+                {stats.top5Heladerias.map((h, i) => (
+                  <MiniBar
+                    key={h.nombre}
+                    label={`${i + 1}. ${h.nombre}`}
+                    value={h.avg}
+                    max={stats.maxScoreHel}
+                    sub={`${h.visitas} visita${h.visitas !== 1 ? "s" : ""}`}
+                    accent={i === 0}
+                  />
+                ))}
+                {stats.top5Heladerias.length === 0 && (
+                  <p className="text-sm text-slate-400 text-center py-4">No hay datos suficientes</p>
+                )}
+              </div>
+            </div>
+
+            {/* Gustos más pedidos */}
+            <div className="panel p-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-slate-600" />
+                <h3 className="font-semibold text-slate-900 text-sm">Gustos más pedidos</h3>
+              </div>
+              <div className="space-y-3">
+                {stats.top5Gustos.map((g, i) => (
+                  <MiniBar
+                    key={g.gusto}
+                    label={`${i + 1}. ${g.gusto}`}
+                    value={g.visitas}
+                    max={stats.maxVisitasGusto}
+                    sub={`score prom. ${g.avg.toFixed(1)}`}
+                    accent={i === 0}
+                  />
+                ))}
+                {stats.top5Gustos.length === 0 && (
+                  <p className="text-sm text-slate-400 text-center py-4">No hay datos suficientes</p>
+                )}
+              </div>
+            </div>
+
+          </div>
+
+          {/* Evolución Mensual */}
+          <div className="panel p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-slate-600" />
+              <h3 className="font-semibold text-slate-900 text-sm">Degustaciones por mes</h3>
+            </div>
+            <div className="space-y-3">
+              {stats.evolucion.map((m) => {
+                const [year, month] = m.mes.split("-");
+                const label = `${MESES[parseInt(month) - 1]} ${year.slice(2)}`;
+                return (
+                  <MiniBar
+                    key={m.mes}
+                    label={label}
+                    value={m.visitas}
+                    max={stats.maxVisitasMes}
+                    sub={`promedio mensual: ${m.avg.toFixed(1)}`}
+                  />
+                );
+              })}
+              {stats.evolucion.length === 0 && (
+                <p className="text-sm text-slate-400 text-center py-4">Sin registros de fechas</p>
+              )}
+            </div>
+          </div>
+
+        </div>
+      ) : (
+        <div className="panel p-8 text-center text-slate-500 text-sm">
+          No hay degustaciones registradas bajo esta categoría.
+        </div>
+      )}
+
+      {/* Datos Curiosos (Globales) */}
+      {globalCuriosities && (
         <div className="panel p-5 space-y-4">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-slate-500" />
-            <h3 className="font-semibold text-slate-900 text-sm">Gustos más pedidos</h3>
-          </div>
-          <div className="space-y-3">
-            {stats.top5Gustos.map((g, i) => (
-              <MiniBar
-                key={g.gusto}
-                label={`${i + 1}. ${g.gusto}`}
-                value={g.visitas}
-                max={stats.maxVisitasGusto}
-                sub={`score prom. ${g.avg.toFixed(1)}`}
-                accent={i === 0}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Evolución mensual */}
-        <div className="panel p-5 space-y-4">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-slate-500" />
-            <h3 className="font-semibold text-slate-900 text-sm">Visitas por mes</h3>
-            <span className="text-xs text-slate-400">(últimos 12 meses)</span>
-          </div>
-          <div className="space-y-2">
-            {stats.evolucion.map((m) => {
-              const [year, month] = m.mes.split("-");
-              const label = `${MESES[parseInt(month) - 1]} ${year.slice(2)}`;
-              return (
-                <MiniBar
-                  key={m.mes}
-                  label={label}
-                  value={m.visitas}
-                  max={stats.maxVisitasMes}
-                  sub={`score ${m.avg.toFixed(1)}`}
-                />
-              );
-            })}
-            {stats.evolucion.length === 0 && (
-              <p className="text-sm text-slate-400">Sin datos de fechas</p>
-            )}
+          <h3 className="font-semibold text-slate-900 text-sm">Datos curiosos globales</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="space-y-1">
+              <p className="text-[10px] text-slate-400 uppercase tracking-wide font-semibold">Categoría favorita</p>
+              <p className="text-sm font-semibold text-slate-800">
+                {globalCuriosities.catFavorita ? CAT_LABELS[globalCuriosities.catFavorita.cat] : "—"}
+              </p>
+              <p className="text-xs text-slate-500">
+                Promedio de {globalCuriosities.catFavorita?.avg.toFixed(1)} puntos
+              </p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] text-slate-400 uppercase tracking-wide font-semibold">Categoría más pedida</p>
+              <p className="text-sm font-semibold text-slate-800">
+                {globalCuriosities.catMasPedida ? CAT_LABELS[globalCuriosities.catMasPedida.cat] : "—"}
+              </p>
+              <p className="text-xs text-slate-500">
+                {globalCuriosities.catMasPedida?.visitas} degustaciones
+              </p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] text-slate-400 uppercase tracking-wide font-semibold">Gusto estrella</p>
+              <p className="text-sm font-semibold text-slate-800">
+                {globalCuriosities.gustoEstrella?.gusto ?? "—"}
+              </p>
+              <p className="text-xs text-slate-500">
+                {globalCuriosities.gustoEstrella?.visitas} elecciones
+              </p>
+            </div>
           </div>
         </div>
-
-      </div>
-
-      {/* Datos curiosos */}
-      <div className="panel p-5 space-y-3">
-        <h3 className="font-semibold text-slate-900 text-sm">Datos curiosos</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="space-y-0.5">
-            <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Heladería más visitada</p>
-            <p className="font-medium text-slate-800">{stats.masVisitada?.nombre ?? "—"}</p>
-            <p className="text-xs text-slate-400">{stats.masVisitada?.visitas} visitas</p>
-          </div>
-          <div className="space-y-0.5">
-            <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Categoría favorita</p>
-            <p className="font-medium text-slate-800">
-              {CAT_EMOJI[stats.catFavorita?.cat as MacroCategoria]} {stats.catFavorita?.cat ?? "—"}
-            </p>
-            <p className="text-xs text-slate-400">{stats.catFavorita?.visitas} degustaciones</p>
-          </div>
-          <div className="space-y-0.5">
-            <p className="text-xs text-slate-500 uppercase tracking-wide font-medium">Cat. mejor puntuada</p>
-            <p className="font-medium text-slate-800">
-              {CAT_EMOJI[stats.catMejorPuntuada?.cat as MacroCategoria]} {stats.catMejorPuntuada?.cat ?? "—"}
-            </p>
-            <p className="text-xs text-slate-400">score prom. {stats.catMejorPuntuada?.avg.toFixed(1)}</p>
-          </div>
-        </div>
-      </div>
+      )}
 
     </div>
   );

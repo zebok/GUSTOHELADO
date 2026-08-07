@@ -210,7 +210,7 @@ const TablaOcurrencias: React.FC<{ ocurrencias: Ocurrencia[] }> = ({ ocurrencias
                 <th className={thClass} onClick={() => toggleSort("puntaje_general")}>
                   <span className="inline-flex items-center gap-1">Score <SortIcon col="puntaje_general" /></span>
                 </th>
-                <th className="px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">↩</th>
+                <th className="px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">Volvería</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -423,7 +423,7 @@ export const DatasetView: React.FC<DatasetViewProps> = ({
           rel="noopener noreferrer"
           className="shrink-0 inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 underline underline-offset-2"
         >
-          📝 Agregar registro <ExternalLink className="w-3 h-3" />
+          Agregar registro <ExternalLink className="w-3 h-3" />
         </a>
       </div>
 
