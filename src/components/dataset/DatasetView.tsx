@@ -397,7 +397,7 @@ const TablaHeladerias: React.FC<{ heladerias: Heladeria[] }> = ({ heladerias }) 
 // ──────────────────────────────────────────────
 export const DatasetView: React.FC<DatasetViewProps> = ({
   heladerias,
-  ocurrencias,
+  ocurrencias = [],
   generadoEl,
 }) => {
   const [activeTable, setActiveTable] = useState<ActiveTable>("ocurrencias");

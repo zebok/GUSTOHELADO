@@ -78,7 +78,7 @@ const MiniBar: React.FC<{ label: string; value: number; max: number; sub?: strin
 
 // ── Componente principal ──────────────────────────────────────────────────
 
-export const KpisView: React.FC<KpisViewProps> = ({ ocurrencias }) => {
+export const KpisView: React.FC<KpisViewProps> = ({ ocurrencias = [] }) => {
   const stats = useMemo(() => {
     if (ocurrencias.length === 0) return null;
 
