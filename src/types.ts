@@ -16,15 +16,29 @@ export interface Heladeria {
   direccion: string;
   lat: number;
   lng: number;
-  barrio: string;
   activa: boolean;
   visitas: number;
   scorePorCategoria: Partial<Record<MacroCategoria, number>>; // precalculado en Python
 }
 
+export interface Ocurrencia {
+  id: number;
+  fecha: string;                 // "YYYY-MM-DD"
+  heladeria_id: number;
+  heladeria_nombre: string;
+  gusto: string;
+  macrocategoria: MacroCategoria;
+  fidelidad_gusto: number | null;
+  puntaje_grupo: number | null;
+  disfrutabilidad: number | null;
+  volveria_a_pedir: boolean;
+  puntaje_general: number;
+}
+
 export interface BaseDeDatos {
   generadoEl: string;
   heladerias: Heladeria[];
+  ocurrencias: Ocurrencia[];
 }
 
 export interface Ubicacion {

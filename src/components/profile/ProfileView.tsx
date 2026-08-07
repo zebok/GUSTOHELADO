@@ -34,8 +34,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ heladerias }) => {
         favoriteHeladeria = h;
       }
 
-      // Visitas por barrio
-      const barrio = h.barrio || "CABA";
+      // Visitas por zona (barrio ya no existe, agrupamos todo en CABA)
+      const barrio = "CABA";
       barrioMap[barrio] = (barrioMap[barrio] || 0) + h.visitas;
 
       // Agregado de puntuaciones por categoría

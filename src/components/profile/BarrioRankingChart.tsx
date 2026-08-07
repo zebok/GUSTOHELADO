@@ -24,7 +24,7 @@ export const BarrioRankingChart: React.FC<BarrioRankingChartProps> = ({
   // Agrupar visitas por barrio
   const barrioMap: Record<string, number> = {};
   heladerias.forEach((h) => {
-    const barrio = h.barrio || "CABA";
+    const barrio = "CABA";
     barrioMap[barrio] = (barrioMap[barrio] || 0) + h.visitas;
   });
 

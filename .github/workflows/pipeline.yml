@@ -48,15 +48,17 @@ jobs:
           git diff --quiet && git diff --staged --quiet || (git commit -m "chore: actualizar datos de producción" && git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git HEAD:main)
 
   build-and-deploy:
-    name: Build — Compilar y desplegar frontend
+    name: Build — Compilar y desplegar en GitHub Pages
     runs-on: ubuntu-latest
     needs: update-data
+    permissions:
+      contents: write  # Necesario para push a gh-pages
 
     steps:
-      - name: Checkout del código
+      - name: Checkout del código (con JSON actualizado)
         uses: actions/checkout@v4
         with:
-          ref: main # Asegura que toma el commit con los datos actualizados
+          ref: main
 
       - name: Configurar Node.js
         uses: actions/setup-node@v4
@@ -70,12 +72,8 @@ jobs:
       - name: Build de la aplicación
         run: npm run build
 
-      # Despliegue: Vercel y Netlify se conectan directamente al repo
-      # y redesplacan automáticamente al detectar un push en main.
-      # Si usás GitHub Pages, descomenta el paso de abajo:
-      #
-      # - name: Deploy a GitHub Pages
-      #   uses: peaceiris/actions-gh-pages@v4
-      #   with:
-      #     github_token: ${{ secrets.GITHUB_TOKEN }}
-      #     publish_dir: ./dist
+      - name: Deploy a GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist

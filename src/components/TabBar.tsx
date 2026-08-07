@@ -1,7 +1,6 @@
 import React from "react";
-import { Home, Table2 } from "lucide-react";
-
-type Tab = "home" | "dataset";
+import { Map, Table2, BarChart3 } from "lucide-react";
+import { Tab } from "../App";
 
 interface TabBarProps {
   activeTab: Tab;
@@ -10,14 +9,18 @@ interface TabBarProps {
 
 export const TabBar: React.FC<TabBarProps> = ({ activeTab, setActiveTab }) => {
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "home", label: "Inicio", icon: <Home className="w-4 h-4" /> },
-    { id: "dataset", label: "Dataset", icon: <Table2 className="w-4 h-4" /> },
+    { id: "home",  label: "Finder",  icon: <Map className="w-4 h-4" /> },
+    { id: "bbdd",  label: "Bitácora", icon: <Table2 className="w-4 h-4" /> },
+    { id: "kpis",  label: "Análisis", icon: <BarChart3 className="w-4 h-4" /> },
   ];
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white/90 backdrop-blur border-b border-slate-200">
       <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        <h1 className="text-sm font-semibold text-slate-900">Helado Finder</h1>
+        <div className="flex items-center gap-2">
+          <span className="text-lg">🍦</span>
+          <h1 className="text-sm font-semibold text-slate-900">GustoHelado</h1>
+        </div>
 
         <nav className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg">
           {tabs.map((tab) => (

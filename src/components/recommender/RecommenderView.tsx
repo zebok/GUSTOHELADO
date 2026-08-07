@@ -28,6 +28,26 @@ export const RecommenderView: React.FC<RecommenderViewProps> = ({ heladerias }) 
 
   return (
     <div className="space-y-6">
+
+      {/* Encabezado */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">Encontrar heladería</h2>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Elegí tu antojo, indicá tu ubicación y el radio. El sistema rankea las heladerías
+            según mis propias calificaciones históricas y la distancia.
+          </p>
+        </div>
+        <a
+          href="https://forms.gle/sqGfbGcy4PYt1JvSA"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0 text-xs text-slate-500 hover:text-slate-700 underline underline-offset-2 transition-colors whitespace-nowrap"
+        >
+          📝 Cargar degustación
+        </a>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         <div className="lg:col-span-4 space-y-4">
           <CravingFilter

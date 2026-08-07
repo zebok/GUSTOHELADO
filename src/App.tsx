@@ -4,10 +4,11 @@ import { fetchHeladerias } from "./lib/data";
 import { TabBar } from "./components/TabBar";
 import { RecommenderView } from "./components/recommender/RecommenderView";
 import { DatasetView } from "./components/dataset/DatasetView";
+import { KpisView } from "./components/kpis/KpisView";
 import { IntroScreen } from "./components/IntroScreen";
 import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
 
-type Tab = "home" | "dataset";
+export type Tab = "home" | "bbdd" | "kpis";
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>("home");
@@ -25,7 +26,7 @@ export const App: React.FC = () => {
     } catch (err) {
       console.error(err);
       setErrorMsg(
-        "No se pudo cargar el dataset. Ejecutá el pipeline de Python para generar los datos."
+        "No se pudieron cargar los datos. El pipeline de datos puede estar desactualizado."
       );
     } finally {
       setLoading(false);
@@ -72,12 +73,20 @@ export const App: React.FC = () => {
             </div>
           ) : db ? (
             <div className="animate-fade-in">
-              {activeTab === "home" ? (
+              {activeTab === "home" && (
                 <RecommenderView heladerias={db.heladerias} />
-              ) : (
+              )}
+              {activeTab === "bbdd" && (
                 <DatasetView
                   heladerias={db.heladerias}
+                  ocurrencias={db.ocurrencias}
                   generadoEl={db.generadoEl}
+                />
+              )}
+              {activeTab === "kpis" && (
+                <KpisView
+                  heladerias={db.heladerias}
+                  ocurrencias={db.ocurrencias}
                 />
               )}
             </div>
