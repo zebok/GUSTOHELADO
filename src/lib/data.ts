@@ -1,12 +1,13 @@
 import { BaseDeDatos } from "../types";
 
 /**
- * Carga la base de datos de heladerías desde el origen especificado por la variable de entorno
- * de Vite (VITE_DATA_SOURCE), adaptándose automáticamente a entornos de desarrollo y producción.
+ * Carga la base de datos de heladerías generada por el pipeline de Python.
+ * El archivo heladerias_prod.json es generado automáticamente por GitHub Actions
+ * leyendo el Google Sheets real.
  */
 export async function fetchHeladerias(): Promise<BaseDeDatos> {
-  const dataSource = import.meta.env.VITE_DATA_SOURCE || "/data/heladerias_test.json";
-  
+  const dataSource = "/data/heladerias_prod.json";
+
   try {
     const response = await fetch(dataSource);
     if (!response.ok) {

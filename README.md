@@ -1,91 +1,185 @@
-# 🍦 Helado Finder CABA — Mi Bitácora y Recomendador
+# 🍦 GustoHelado — Mi Bitácora Personal de Heladerías en CABA
 
-> *"Estando en cualquier punto de Buenos Aires, ¿a qué heladería voy minimizando la caminata pero maximizando la calidad según mi antojo del día?"*
+> *"¿A qué heladería ir para minimizar la caminata pero maximizar la calidad, según mi antojo de hoy?"*
 
-**Helado Finder CABA** es un proyecto personal de **Data Engineering y Analytics** creado por **Sebi**. 
-Nace de una necesidad real: optimizar la decisión de dónde tomar helado basándome en una **bitácora histórica personal** alimentada en vivo. 
+**GustoHelado** es mi primer proyecto personal de software. Lo construí para responder una pregunta concreta sobre mi vida cotidiana usando programación, datos y un poco de matemática.
 
-Este repositorio contiene un flujo de datos End-to-End pragmático, de latencia cero y costos $0, diseñado específicamente como proyecto de portfolio.
+No es un producto ni una startup. Es un ejercicio de curiosidad metodológica: tengo una hipótesis, diseño un sistema para recolectar datos, y dejo que los números me digan la respuesta.
 
 ---
 
-## 🔬 La Hipótesis y el Modelo Matemático
+## 🔬 La Hipótesis
 
-El recomendador no utiliza opiniones de terceros (como Google Maps), sino que se basa exclusivamente en mi propio paladar.
-Asume que la salida perfecta es un equilibrio entre **Calidad** y **Fricción (Caminata)**.
+Cada vez que quiero helado, enfrento el mismo dilema: ¿voy a la más cercana o vale la pena caminar más? Eso depende de qué antojo tengo y de cuán buena es cada heladería *para ese antojo en particular*, según **mi propio paladar** (no el de Google Maps).
 
-Cuando abro la aplicación, el algoritmo calcula en vivo un **Blend Score** para cada heladería en un radio determinado, utilizando la siguiente fórmula:
+El sistema calcula un **Blend Score** en tiempo real:
 
 ```text
-Score Final = (Puntaje_Histórico * 0.7) + (Proximidad * 0.3)
+Score Final = (Puntaje Histórico × 0.7) + (Proximidad × 0.3)
 ```
 
-1. **Puntaje_Histórico (70%)**: Promedio de mis calificaciones para el antojo que seleccioné (ej. Chocolate), normalizado de 0 a 1.
-2. **Proximidad (30%)**: Distancia lineal (fórmula de Haversine) entre el GPS de mi celular y la heladería, normalizada según mi tolerancia máxima a caminar.
+- **Puntaje Histórico (70%)**: promedio de mis calificaciones personales para el tipo de helado que quiero hoy.
+- **Proximidad (30%)**: qué tan cerca está según mi ubicación actual (GPS o dirección ingresada), usando la fórmula de Haversine.
 
 ---
 
-## 🚀 Arquitectura del Proyecto (End-to-End)
+## 🗺️ Arquitectura del Sistema
 
-El proyecto es un sistema de ingesta y consumo de datos hiper-pragmático que demuestra que no siempre se necesita una infraestructura compleja para resolver un problema de Data.
-
-```mermaid
-graph LR
-    A[Google Form en mi Celular] -->|Data Entry| B(Google Sheets)
-    B -->|Pipeline Python/Pandas| C{Consolidación y Joins}
-    C -->|Genera| D(JSON Estático)
-    D -->|Consume| E[React / Vite App]
-    E -->|GPS en tiempo real| F((Recomendación Final))
-    
-    style A fill:#4CAF50,stroke:#fff,stroke-width:2px,color:#fff
-    style B fill:#1e8e3e,stroke:#fff,stroke-width:2px,color:#fff
-    style C fill:#f4b400,stroke:#fff,stroke-width:2px,color:#fff
-    style E fill:#4285f4,stroke:#fff,stroke-width:2px,color:#fff
+```
+📱 Google Form (celular)
+       │
+       ▼ Form Submit
+📊 Google Sheets  ←──── Catálogo de Heladerías y Categorías
+       │
+       ▼ Apps Script (trigger automático)
+📊 Sheet OCURRENCIAS  ← fila normalizada con IDs + puntajes
+       │
+       ▼ GitHub Actions (viernes 23:00 UTC o manual)
+🐍 Python / Pandas ETL
+       │
+       ▼
+📄 heladerias_prod.json  (JSON estático precalculado)
+       │
+       ▼
+⚛️  React / Vite App  ←── GPS del usuario en tiempo real
+       │
+       ▼
+🎯 Recomendación final ordenada por Score
 ```
 
-1. **Ingesta (Google Forms + Sheets)**: Cada vez que pruebo un helado, lleno un formulario en mi celular que impacta directo en mi "Data Warehouse" (Google Sheets).
-2. **ETL (Python & Pandas)**: El script consolida las ocurrencias históricas con las heladerías y calcula el score promedio por categoría de antojo.
-3. **Frontend Dashboard (Vite, React, TypeScript)**: Consume el JSON estático precalculado y realiza todo el filtrado geográfico y la recomendación matemática de manera reactiva local en mi navegador. También cuenta con un "Profile View" donde analizo mis hábitos de consumo de helado.
+### Por qué esta arquitectura
+
+- **Costo $0**: Google Sheets funciona como base de datos. No hay servidor propio.
+- **Sin backend**: el frontend consume un JSON estático. Todo el cálculo de distancias y scoring corre en el navegador.
+- **Automatización real**: el pipeline de Python corre en GitHub Actions cada semana y actualiza los datos de producción automáticamente.
 
 ---
 
-## 💻 Guía de Inicio Rápido en Local
+## 📁 Estructura del Repositorio
 
-### 1. Requisitos Previos
-* **Node.js** (v18+)
-* **Python** (3.10+)
+```
+GUSTOHELADO/
+├── src/                          # Frontend React + TypeScript
+│   ├── components/
+│   │   ├── recommender/          # Recomendador (GPS, slider, mapa)
+│   │   └── dataset/              # Vista de datos del Sheets
+│   ├── lib/
+│   │   ├── scoring.ts            # Algoritmo de Blend Score
+│   │   ├── geo.ts                # Haversine + geocodificación
+│   │   └── data.ts               # Fetch del JSON según entorno
+│   └── types.ts                  # Tipos TypeScript compartidos
+│
+├── data_pipeline/
+│   ├── process_data.py           # ETL: lee Sheets → genera JSON
+│   ├── requirements.txt
+│   └── mock_sheets/              # CSVs para desarrollo local
+│       ├── heladerias.csv
+│       ├── categorias.csv
+│       └── ocurrencias.csv       # Generado automáticamente (400 visitas simuladas)
+│
+├── public/data/
+│   ├── heladerias_test.json      # Generado por pipeline --mode test
+│   └── heladerias_prod.json      # Generado por GitHub Actions --mode prod
+│
+├── .env.test                     # Apunta a heladerias_test.json
+├── .env.production               # Apunta a heladerias_prod.json
+└── .github/workflows/pipeline.yml  # CI/CD: ETL + build + deploy
+```
 
-### 2. Clonar e Instalar Frontend
+---
+
+## 💻 Cómo Correrlo en Local
+
+### Requisitos
+- Node.js v18+
+- Python 3.10+
+
+### 1. Instalar dependencias del frontend
 ```bash
 npm install
 ```
 
-### 3. Configurar Python (ETL Pipeline)
+### 2. Configurar el entorno Python
 ```bash
 python3 -m venv venv
-source venv/bin/activate  # macOS/Linux
+source venv/bin/activate   # macOS / Linux
+# venv\Scripts\activate    # Windows
+
 pip install -r data_pipeline/requirements.txt
 ```
 
-### 4. Generar Datos (Pipeline)
-Ejecutar el script en modo "test" procesará los datos dummy locales para que puedas levantar la app:
+### 3. Generar los datos
+El pipeline lee del Google Sheets real. Necesitás las credenciales configuradas (ver sección de Producción):
 ```bash
-python data_pipeline/process_data.py --mode test
-```
-*(Esto genera el archivo `public/data/heladerias_test.json` consolidando las visitas de prueba).*
+export SPREADSHEET_ID="tu_spreadsheet_id"
+export GOOGLE_SERVICE_ACCOUNT_JSON='{"type":"service_account",...}'
 
-### 5. Correr el Dashboard
-```bash
-npm run dev:test
+python3 data_pipeline/process_data.py
 ```
-La aplicación se cargará en `http://localhost:5173` consumiendo los datos generados y mostrándote el recomendador y mi bitácora analítica.
+Esto genera `public/data/heladerias_prod.json`.
+
+### 4. Levantar la app
+```bash
+npm run dev
+```
+Abre `http://localhost:5173`.
 
 ---
 
-## ⚙️ Configuración para Producción (Deploy Automático)
+## ⚙️ Configuración para Producción
 
-Para conectar el pipeline con tu propio Google Sheet en GitHub Actions, necesitas configurar estos **Repository Secrets**:
-1. `SPREADSHEET_ID`: El ID de tu Google Sheet (con las pestañas `HELADERIAS`, `CATEGORIAS`, `OCURRENCIAS`).
-2. `GOOGLE_SERVICE_ACCOUNT_JSON`: Tu Service Account de GCP con permisos de lectura.
+El pipeline en modo `prod` lee los datos reales desde mi Google Sheets usando una **Service Account de Google Cloud** (gratuita, no requiere tarjeta de crédito).
 
-Cuando esto está seteado, cada deploy o cronjob de GitHub Actions ejecuta el script de Pandas en modo `prod`, actualiza el JSON y redespliega la web gratis en Vercel/Netlify.
+### Paso 1 — Crear la Service Account (una sola vez)
+
+1. Ir a [Google Cloud Console](https://console.cloud.google.com)
+2. Crear un proyecto (o usar uno existente)
+3. Habilitar la **Google Sheets API**
+4. Ir a *IAM y administración → Cuentas de servicio → Crear cuenta*
+5. Descargar el archivo JSON de credenciales
+6. Compartir el Google Sheets con el email de la service account (permiso de **Lector**)
+
+### Paso 2 — Configurar los Secrets en GitHub
+
+En *Settings → Secrets and variables → Actions* del repositorio, agregar:
+
+| Secret | Valor |
+|--------|-------|
+| `SPREADSHEET_ID` | ID del Google Sheets (parte de la URL) |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | Contenido completo del JSON de credenciales |
+
+### Cómo se dispara el pipeline
+
+- **Automáticamente**: todos los viernes a las 23:00 UTC (cron job)
+- **En cada push a `main`**
+- **Manualmente**: desde la pestaña *Actions* del repo → *Run workflow*
+
+---
+
+## 📊 Estructura del Google Sheets
+
+El Sheets (`HELADERIAS_BBDD`) tiene 4 pestañas que funcionan como tablas relacionales:
+
+| Pestaña | Propósito | Clave primaria |
+|---------|-----------|----------------|
+| `HELADERIAS` | Catálogo de locales con coordenadas | `ID` |
+| `CATEGORIAS` | Taxonomía de sabores (CHOCOLATE, DDL, CREMA...) | `ID` |
+| `OCURRENCIAS` | Registro de cada visita con puntajes | `ID` |
+| `CADENAS` | Marcas/franquicias | `ID_CADENA` |
+
+El Google Form inserta en `OCURRENCIAS` a través de un **trigger de Apps Script** que normaliza los nombres del Form en IDs numéricos antes de escribir.
+
+---
+
+## 🤔 Qué aprendí haciendo esto
+
+- Normalización básica de base de datos (tablas relacionales con claves foráneas)
+- ETL con Python/Pandas (joins, groupby, exportación a JSON)
+- Arquitectura Jamstack: separar datos estáticos de lógica de presentación
+- Geolocalización en el browser (Web GPS API + fórmula de Haversine)
+- Automatización con GitHub Actions y Google Apps Script
+- Cómo conectar sistemas sin un backend propio
+
+---
+
+*Proyecto personal de Sebastian Porini — CABA, Argentina*
