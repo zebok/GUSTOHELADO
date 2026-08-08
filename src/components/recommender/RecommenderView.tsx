@@ -6,6 +6,7 @@ import { CravingFilter } from "./CravingFilter";
 import { DistanceSlider } from "./DistanceSlider";
 import { MapView } from "./MapView";
 import { ResultsList } from "./ResultsList";
+import { useLanguage } from "../../i18n/LanguageContext";
 import { Compass } from "lucide-react";
 
 interface RecommenderViewProps {
@@ -17,6 +18,7 @@ export const RecommenderView: React.FC<RecommenderViewProps> = ({
   heladerias,
   onVerInsights,
 }) => {
+  const { t } = useLanguage();
   const [userLocation, setUserLocation] = useState<Ubicacion | null>(null);
   const [maxDistanceMeters, setMaxDistanceMeters] = useState<number>(1500);
   const [selectedAntojos, setSelectedAntojos] = useState<Antojo[]>(["CHOCOLATE"]);
@@ -36,11 +38,8 @@ export const RecommenderView: React.FC<RecommenderViewProps> = ({
       {/* Encabezado */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Encontrar heladería</h2>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Elegí tu antojo, indicá tu ubicación y el radio. El sistema rankea las heladerías
-            según mis propias calificaciones históricas y la distancia.
-          </p>
+          <h2 className="text-xl font-bold text-slate-900">{t("finder.title")}</h2>
+          <p className="text-sm text-slate-500 mt-0.5">{t("finder.subtitle")}</p>
         </div>
         <a
           href="https://forms.gle/sqGfbGcy4PYt1JvSA"
@@ -48,7 +47,7 @@ export const RecommenderView: React.FC<RecommenderViewProps> = ({
           rel="noopener noreferrer"
           className="shrink-0 text-xs text-slate-500 hover:text-slate-700 underline underline-offset-2 transition-colors whitespace-nowrap"
         >
-          📝 Cargar degustación
+          {t("finder.logTasting")}
         </a>
       </div>
 
@@ -75,12 +74,8 @@ export const RecommenderView: React.FC<RecommenderViewProps> = ({
                 <Compass className="w-5 h-5" />
               </div>
               <div className="space-y-1">
-                <h4 className="text-slate-700 font-medium">
-                  Indicá tu ubicación
-                </h4>
-                <p className="text-sm text-slate-400 max-w-xs">
-                  Escribí una dirección de CABA o usá GPS para ver el mapa y las recomendaciones.
-                </p>
+                <h4 className="text-slate-700 font-medium">{t("finder.empty.title")}</h4>
+                <p className="text-sm text-slate-400 max-w-xs">{t("finder.empty.subtitle")}</p>
               </div>
             </div>
           ) : (

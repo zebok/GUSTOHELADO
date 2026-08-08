@@ -1,4 +1,5 @@
 import React from "react";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 interface DistanceSliderProps {
   maxDistanceMeters: number;
@@ -9,6 +10,7 @@ export const DistanceSlider: React.FC<DistanceSliderProps> = ({
   maxDistanceMeters,
   onDistanceChange,
 }) => {
+  const { t } = useLanguage();
   const min = 500;
   const max = 5000;
   const percentage = ((maxDistanceMeters - min) / (max - min)) * 100;
@@ -17,7 +19,7 @@ export const DistanceSlider: React.FC<DistanceSliderProps> = ({
   return (
     <div className="panel p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="panel-label">Radio máximo</h3>
+        <h3 className="panel-label">{t("distance.title")}</h3>
         <span className="text-sm font-mono font-medium text-slate-700">
           {maxDistanceMeters >= 1000
             ? `${(maxDistanceMeters / 1000).toFixed(1)} km`
@@ -39,7 +41,7 @@ export const DistanceSlider: React.FC<DistanceSliderProps> = ({
       />
 
       <p className="text-xs text-slate-400">
-        ~{walkingMinutes} min caminando
+        {t("distance.walking", { n: walkingMinutes })}
       </p>
     </div>
   );

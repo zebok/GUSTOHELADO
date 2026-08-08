@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import { Ubicacion, ResultadoRankeado } from "../../types";
 import { useMap } from "react-leaflet";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 interface MapViewProps {
   results: ResultadoRankeado[];
@@ -47,6 +48,7 @@ const createSecondaryIcon = () =>
   });
 
 export const MapView: React.FC<MapViewProps> = ({ results, userLocation }) => {
+  const { t } = useLanguage();
   const defaultCenter: [number, number] = [-34.6037389, -58.3815704];
   const mapCenter: [number, number] = userLocation
     ? [userLocation.lat, userLocation.lng]
@@ -72,7 +74,7 @@ export const MapView: React.FC<MapViewProps> = ({ results, userLocation }) => {
             icon={createUserIcon()}
           >
             <Popup>
-              <p className="text-xs font-medium">Tu ubicación</p>
+              <p className="text-xs font-medium">{t("map.yourLocation")}</p>
             </Popup>
           </Marker>
         )}

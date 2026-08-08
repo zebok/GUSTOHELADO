@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Heladeria, Ocurrencia, MacroCategoria } from "../../types";
+import { useLanguage } from "../../i18n/LanguageContext";
+import { localeFor } from "../../i18n/translations";
 import { Search, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from "lucide-react";
 
 interface DatasetViewProps {
@@ -22,21 +24,13 @@ type HelSortKey = "nombre" | "visitas" | "CHOCOLATE" | "DULCE DE LECHE" | "CREMA
 type SortDir = "asc" | "desc";
 type ActiveTable = "ocurrencias" | "heladerias";
 
-const CAT_LABEL: Record<MacroCategoria, string> = {
-  CHOCOLATE: "Chocolate",
-  "DULCE DE LECHE": "DDL",
-  CREMA: "Crema",
-  FRUTA: "Fruta",
-  AUTOR: "Autor",
-  MISC: "Misc",
-};
-
 const HEL_CATS: HelSortKey[] = ["CHOCOLATE", "DULCE DE LECHE", "CREMA", "FRUTA", "AUTOR"];
 
 // ──────────────────────────────────────────────
 // Sub-componente: tabla de OCURRENCIAS
 // ──────────────────────────────────────────────
 const TablaOcurrencias: React.FC<{ ocurrencias: Ocurrencia[] }> = ({ ocurrencias }) => {
+  const { t, lang } = useLanguage();
   const [search, setSearch]         = useState("");
   const [minScore, setMinScore]     = useState<number>(0);
   const [fechaDesde, setFechaDesde] = useState("");
@@ -114,7 +108,7 @@ const TablaOcurrencias: React.FC<{ ocurrencias: Ocurrencia[] }> = ({ ocurrencias
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por heladería, gusto o categoría..."
+              placeholder={t("table.search")}
               className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 bg-white"
             />
           </div>
@@ -122,7 +116,7 @@ const TablaOcurrencias: React.FC<{ ocurrencias: Ocurrencia[] }> = ({ ocurrencias
 
         <div className="flex flex-wrap gap-3 items-center">
           <label className="flex items-center gap-1.5 text-xs text-slate-600 whitespace-nowrap">
-            <span className="font-medium">Score ≥</span>
+            <span className="font-medium">{t("table.scoreMin")}</span>
             <input
               type="number"
               min={0}
@@ -136,7 +130,7 @@ const TablaOcurrencias: React.FC<{ ocurrencias: Ocurrencia[] }> = ({ ocurrencias
           </label>
 
           <label className="flex items-center gap-1.5 text-xs text-slate-600 whitespace-nowrap">
-            <span className="font-medium">Desde</span>
+            <span className="font-medium">{t("table.from")}</span>
             <input
               type="date"
               value={fechaDesde}
@@ -146,7 +140,7 @@ const TablaOcurrencias: React.FC<{ ocurrencias: Ocurrencia[] }> = ({ ocurrencias
           </label>
 
           <label className="flex items-center gap-1.5 text-xs text-slate-600 whitespace-nowrap">
-            <span className="font-medium">Hasta</span>
+            <span className="font-medium">{t("table.to")}</span>
             <input
               type="date"
               value={fechaHasta}
@@ -160,9 +154,9 @@ const TablaOcurrencias: React.FC<{ ocurrencias: Ocurrencia[] }> = ({ ocurrencias
             onChange={(e) => setVolveria(e.target.value as "todos" | "si" | "no")}
             className="text-xs border border-slate-200 rounded px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-slate-200 cursor-pointer"
           >
-            <option value="todos">Volvería: todos</option>
-            <option value="si">Volvería: sí</option>
-            <option value="no">Volvería: no</option>
+            <option value="todos">{t("table.repeatAll")}</option>
+            <option value="si">{t("table.repeatYes")}</option>
+            <option value="no">{t("table.repeatNo")}</option>
           </select>
 
           {(search || minScore > 0 || fechaDesde || fechaHasta || volveria !== "todos") && (
@@ -170,12 +164,12 @@ const TablaOcurrencias: React.FC<{ ocurrencias: Ocurrencia[] }> = ({ ocurrencias
               onClick={() => { setSearch(""); setMinScore(0); setFechaDesde(""); setFechaHasta(""); setVolveria("todos"); }}
               className="text-xs text-slate-400 hover:text-slate-600 underline cursor-pointer"
             >
-              Limpiar filtros
+              {t("table.clearFilters")}
             </button>
           )}
 
           <span className="ml-auto text-xs text-slate-400 whitespace-nowrap">
-            {filtered.length} de {ocurrencias.length} registros
+            {t("table.count", { n: filtered.length, m: ocurrencias.length })}
           </span>
         </div>
       </div>
@@ -187,44 +181,44 @@ const TablaOcurrencias: React.FC<{ ocurrencias: Ocurrencia[] }> = ({ ocurrencias
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
                 <th className={thClass} onClick={() => toggleSort("fecha")}>
-                  <span className="inline-flex items-center gap-1">Fecha <SortIcon col="fecha" /></span>
+                  <span className="inline-flex items-center gap-1">{t("table.date")} <SortIcon col="fecha" /></span>
                 </th>
                 <th className={thClass} onClick={() => toggleSort("heladeria_nombre")}>
-                  <span className="inline-flex items-center gap-1">Heladería <SortIcon col="heladeria_nombre" /></span>
+                  <span className="inline-flex items-center gap-1">{t("table.shop")} <SortIcon col="heladeria_nombre" /></span>
                 </th>
                 <th className={thClass} onClick={() => toggleSort("gusto")}>
-                  <span className="inline-flex items-center gap-1">Gusto <SortIcon col="gusto" /></span>
+                  <span className="inline-flex items-center gap-1">{t("table.flavor")} <SortIcon col="gusto" /></span>
                 </th>
                 <th className={thClass} onClick={() => toggleSort("macrocategoria")}>
-                  <span className="inline-flex items-center gap-1">Cat. <SortIcon col="macrocategoria" /></span>
+                  <span className="inline-flex items-center gap-1">{t("table.cat")} <SortIcon col="macrocategoria" /></span>
                 </th>
                 <th className={thClass} onClick={() => toggleSort("fidelidad_gusto")}>
-                  <span className="inline-flex items-center gap-1">Fid. <SortIcon col="fidelidad_gusto" /></span>
+                  <span className="inline-flex items-center gap-1">{t("table.fidelity")} <SortIcon col="fidelidad_gusto" /></span>
                 </th>
                 <th className={thClass} onClick={() => toggleSort("puntaje_grupo")}>
-                  <span className="inline-flex items-center gap-1">Grp. <SortIcon col="puntaje_grupo" /></span>
+                  <span className="inline-flex items-center gap-1">{t("table.group")} <SortIcon col="puntaje_grupo" /></span>
                 </th>
                 <th className={thClass} onClick={() => toggleSort("disfrutabilidad")}>
-                  <span className="inline-flex items-center gap-1">Disf. <SortIcon col="disfrutabilidad" /></span>
+                  <span className="inline-flex items-center gap-1">{t("table.enjoy")} <SortIcon col="disfrutabilidad" /></span>
                 </th>
                 <th className={thClass} onClick={() => toggleSort("puntaje_general")}>
-                  <span className="inline-flex items-center gap-1">Score <SortIcon col="puntaje_general" /></span>
+                  <span className="inline-flex items-center gap-1">{t("table.score")} <SortIcon col="puntaje_general" /></span>
                 </th>
-                <th className="px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">Volvería</th>
+                <th className="px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("table.repeat")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {sorted.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-12 text-center text-slate-400 text-sm">
-                    No hay registros con esos filtros
+                    {t("table.noRecords")}
                   </td>
                 </tr>
               ) : (
                 sorted.map((o) => (
                   <tr key={o.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-3 py-2.5 font-mono text-xs text-slate-500 whitespace-nowrap">
-                      {o.fecha ? new Date(o.fecha + "T12:00:00").toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit" }) : "—"}
+                      {o.fecha ? new Date(o.fecha + "T12:00:00").toLocaleDateString(localeFor(lang), { day: "2-digit", month: "2-digit", year: "2-digit" }) : "—"}
                     </td>
                     <td className="px-3 py-2.5 font-medium text-slate-900 whitespace-nowrap max-w-[180px] truncate">
                       {o.heladeria_nombre}
@@ -232,7 +226,7 @@ const TablaOcurrencias: React.FC<{ ocurrencias: Ocurrencia[] }> = ({ ocurrencias
                     <td className="px-3 py-2.5 text-slate-600 max-w-[160px] truncate">{o.gusto}</td>
                     <td className="px-3 py-2.5">
                       <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full whitespace-nowrap">
-                        {CAT_LABEL[o.macrocategoria] ?? o.macrocategoria}
+                        {t(`catShort.${o.macrocategoria}`) ?? o.macrocategoria}
                       </span>
                     </td>
                     <td className="px-3 py-2.5 font-mono text-center text-slate-500 text-xs">
@@ -267,6 +261,7 @@ const TablaOcurrencias: React.FC<{ ocurrencias: Ocurrencia[] }> = ({ ocurrencias
 // Sub-componente: tabla de HELADERÍAS
 // ──────────────────────────────────────────────
 const TablaHeladerias: React.FC<{ heladerias: Heladeria[] }> = ({ heladerias }) => {
+  const { t, plural } = useLanguage();
   const [soloActivas, setSoloActivas] = useState(true);
   const [search, setSearch]           = useState("");
   const [sortKey, setSortKey]         = useState<HelSortKey>("nombre");
@@ -320,7 +315,7 @@ const TablaHeladerias: React.FC<{ heladerias: Heladeria[] }> = ({ heladerias }) 
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nombre o dirección..."
+            placeholder={t("table.searchShop")}
             className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 bg-white"
           />
         </div>
@@ -331,9 +326,9 @@ const TablaHeladerias: React.FC<{ heladerias: Heladeria[] }> = ({ heladerias }) 
             onChange={(e) => setSoloActivas(e.target.checked)}
             className="rounded border-slate-300"
           />
-          Solo activas
+          {t("table.activeOnly")}
         </label>
-        <span className="text-xs text-slate-400 self-center whitespace-nowrap">{filtered.length} heladerías</span>
+        <span className="text-xs text-slate-400 self-center whitespace-nowrap">{plural("table.shopCount", filtered.length)}</span>
       </div>
 
       <div className="panel overflow-hidden">
@@ -342,16 +337,16 @@ const TablaHeladerias: React.FC<{ heladerias: Heladeria[] }> = ({ heladerias }) 
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
                 <th className={thClass} onClick={() => toggleSort("nombre")}>
-                  <span className="inline-flex items-center gap-1">Nombre <SortIcon col="nombre" /></span>
+                  <span className="inline-flex items-center gap-1">{t("table.name")} <SortIcon col="nombre" /></span>
                 </th>
-                <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">Dirección</th>
+                <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{t("table.address")}</th>
                 <th className={thClass} onClick={() => toggleSort("visitas")}>
-                  <span className="inline-flex items-center gap-1">Visitas <SortIcon col="visitas" /></span>
+                  <span className="inline-flex items-center gap-1">{t("table.visits")} <SortIcon col="visitas" /></span>
                 </th>
                 {HEL_CATS.map((cat) => (
                   <th key={cat} className={thClass} onClick={() => toggleSort(cat)}>
                     <span className="inline-flex items-center gap-1">
-                      {CAT_LABEL[cat as MacroCategoria]} <SortIcon col={cat} />
+                      {t(`catShort.${cat}`)} <SortIcon col={cat} />
                     </span>
                   </th>
                 ))}
@@ -361,7 +356,7 @@ const TablaHeladerias: React.FC<{ heladerias: Heladeria[] }> = ({ heladerias }) 
               {sorted.length === 0 ? (
                 <tr>
                   <td colSpan={3 + HEL_CATS.length} className="px-4 py-12 text-center text-slate-400 text-sm">
-                    No hay resultados
+                    {t("table.noResults")}
                   </td>
                 </tr>
               ) : (
@@ -369,7 +364,7 @@ const TablaHeladerias: React.FC<{ heladerias: Heladeria[] }> = ({ heladerias }) 
                   <tr key={h.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-3 py-2.5 font-medium text-slate-900 whitespace-nowrap">
                       {h.nombre}
-                      {!h.activa && <span className="ml-1.5 text-[10px] text-slate-400">(inactiva)</span>}
+                      {!h.activa && <span className="ml-1.5 text-[10px] text-slate-400">{t("table.inactive")}</span>}
                     </td>
                     <td className="px-3 py-2.5 text-slate-500 max-w-[200px] truncate">{h.direccion}</td>
                     <td className="px-3 py-2.5 font-mono text-slate-700 text-center">{h.visitas}</td>
@@ -400,6 +395,7 @@ export const DatasetView: React.FC<DatasetViewProps> = ({
   ocurrencias = [],
   generadoEl,
 }) => {
+  const { t, lang } = useLanguage();
   const [activeTable, setActiveTable] = useState<ActiveTable>("ocurrencias");
 
   return (
@@ -407,12 +403,12 @@ export const DatasetView: React.FC<DatasetViewProps> = ({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Bitácora</h2>
+          <h2 className="text-xl font-bold text-slate-900">{t("dataset.title")}</h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            Los datos reales del Google Sheets, directamente.
+            {t("dataset.subtitle")}
             {generadoEl && (
               <span className="text-slate-400">
-                {" "}· actualizado {new Date(generadoEl).toLocaleDateString("es-AR")}
+                {" "}· {t("dataset.updated", { fecha: new Date(generadoEl).toLocaleDateString(localeFor(lang)) })}
               </span>
             )}
           </p>
@@ -423,25 +419,25 @@ export const DatasetView: React.FC<DatasetViewProps> = ({
           rel="noopener noreferrer"
           className="shrink-0 inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 underline underline-offset-2"
         >
-          Agregar registro <ExternalLink className="w-3 h-3" />
+          {t("dataset.addRecord")} <ExternalLink className="w-3 h-3" />
         </a>
       </div>
 
       {/* Toggle de tabla */}
       <div className="flex gap-1 p-1 bg-slate-100 rounded-lg w-fit">
-        {(["ocurrencias", "heladerias"] as ActiveTable[]).map((t) => (
+        {(["ocurrencias", "heladerias"] as ActiveTable[]).map((tableId) => (
           <button
-            key={t}
-            onClick={() => setActiveTable(t)}
+            key={tableId}
+            onClick={() => setActiveTable(tableId)}
             className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
-              activeTable === t
+              activeTable === tableId
                 ? "bg-white text-slate-900 shadow-sm"
                 : "text-slate-500 hover:text-slate-700"
             }`}
           >
-            {t === "ocurrencias"
-              ? `Ocurrencias (${ocurrencias.length})`
-              : `Heladerías (${heladerias.length})`}
+            {tableId === "ocurrencias"
+              ? t("dataset.occurrences", { n: ocurrencias.length })
+              : t("dataset.shops", { n: heladerias.length })}
           </button>
         ))}
       </div>

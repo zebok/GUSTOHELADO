@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Heladeria, Ocurrencia, MacroCategoria } from "../../types";
+import { useLanguage } from "../../i18n/LanguageContext";
 import { Trophy, Star, TrendingUp, Calendar, Repeat, Hash, ChevronDown, RefreshCw } from "lucide-react";
 import {
   Chart as ChartJS,
@@ -48,20 +49,6 @@ const groupBy = <T,>(arr: T[], key: (item: T) => string) =>
 const avg = (nums: number[]) =>
   nums.length === 0 ? 0 : nums.reduce((a, b) => a + b, 0) / nums.length;
 
-const MESES = [
-  "Ene", "Feb", "Mar", "Abr", "May", "Jun",
-  "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
-];
-
-const CAT_LABELS: Record<MacroCategoria, string> = {
-  CHOCOLATE: "Chocolate",
-  "DULCE DE LECHE": "Dulce de Leche",
-  CREMA: "Crema",
-  FRUTA: "Fruta",
-  AUTOR: "De Autor",
-  MISC: "Variedades",
-};
-
 // ── Sub-componentes ──────────────────────────────────────────────────────
 
 const KpiCard: React.FC<{
@@ -108,7 +95,15 @@ export const KpisView: React.FC<KpisViewProps> = ({
   selectedHeladeriaFilter,
   onHeladeriaFilterChange,
 }) => {
+  const { t, plural } = useLanguage();
   const [selectedCategory, setSelectedCategory] = useState<string>("TODAS");
+
+  const MESES = useMemo(
+    () => Array.from({ length: 12 }, (_, i) => t(`month.${i + 1}`)),
+    [t]
+  );
+
+  const catLabel = (cat: MacroCategoria) => t(`cat.${cat}`);
 
   // Filtro reactivo en el frontend (combina Categoría y Heladería)
   const filteredOcurrencias = useMemo(() => {
@@ -241,7 +236,7 @@ export const KpisView: React.FC<KpisViewProps> = ({
       labels,
       datasets: [
         {
-          label: "Degustaciones por mes",
+          label: t("kpis.chart.tastingsPerMonth"),
           data,
           borderColor: "rgb(30, 41, 59)", // slate-800
           backgroundColor: "rgba(30, 41, 59, 0.04)",
@@ -253,7 +248,7 @@ export const KpisView: React.FC<KpisViewProps> = ({
         },
       ],
     };
-  }, [stats]);
+  }, [stats, t, MESES]);
 
   // 2. Gráfico de Calificaciones por Categoría (Barras)
   const scorePorCategoriaChartData = useMemo(() => {
@@ -264,10 +259,10 @@ export const KpisView: React.FC<KpisViewProps> = ({
     });
 
     return {
-      labels: cats.map((c) => CAT_LABELS[c]),
+      labels: cats.map((c) => catLabel(c)),
       datasets: [
         {
-          label: "Calificación Promedio",
+          label: t("kpis.chart.avgRating"),
           data,
           backgroundColor: "rgba(71, 85, 105, 0.2)", // slate-600
           borderColor: "rgb(71, 85, 105)",
@@ -277,7 +272,7 @@ export const KpisView: React.FC<KpisViewProps> = ({
         },
       ],
     };
-  }, [filteredOcurrencias]);
+  }, [filteredOcurrencias, t, catLabel]);
 
   const chartOptions = {
     responsive: true,
@@ -316,10 +311,8 @@ export const KpisView: React.FC<KpisViewProps> = ({
       {/* Header & Filtros */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Análisis</h2>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Degustaciones registradas e indicadores clave del proyecto.
-          </p>
+          <h2 className="text-xl font-bold text-slate-900">{t("kpis.title")}</h2>
+          <p className="text-sm text-slate-500 mt-0.5">{t("kpis.subtitle")}</p>
         </div>
 
         {/* Controles de Filtros */}
@@ -335,7 +328,7 @@ export const KpisView: React.FC<KpisViewProps> = ({
               className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 font-medium cursor-pointer"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              Limpiar filtros
+              {t("kpis.clearFilters")}
             </button>
           )}
 
@@ -346,7 +339,7 @@ export const KpisView: React.FC<KpisViewProps> = ({
               onChange={(e) => onHeladeriaFilterChange(e.target.value)}
               className="appearance-none pl-3 pr-8 py-2 text-xs font-medium border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-200 cursor-pointer min-w-[160px]"
             >
-              <option value="TODAS">Todas las heladerías</option>
+              <option value="TODAS">{t("kpis.allShops")}</option>
               {heladeriasFiltro.map((hel) => (
                 <option key={hel} value={hel}>
                   {hel}
@@ -363,10 +356,10 @@ export const KpisView: React.FC<KpisViewProps> = ({
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="appearance-none pl-3 pr-8 py-2 text-xs font-medium border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-slate-200 cursor-pointer min-w-[160px]"
             >
-              <option value="TODAS">Todas las categorías</option>
+              <option value="TODAS">{t("kpis.allCategories")}</option>
               {categoriasFiltro.map((cat) => (
                 <option key={cat} value={cat}>
-                  {CAT_LABELS[cat] ?? cat}
+                  {catLabel(cat as MacroCategoria) ?? cat}
                 </option>
               ))}
             </select>
@@ -382,22 +375,22 @@ export const KpisView: React.FC<KpisViewProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <KpiCard
               icon={<Hash className="w-3.5 h-3.5 text-slate-500" />}
-              label="Degustaciones"
+              label={t("kpis.tastings")}
               value={stats.total}
-              sub="registradas en la selección actual"
+              sub={t("kpis.tastingsSub")}
             />
             <KpiCard
               icon={<Star className="w-3.5 h-3.5 text-slate-500" />}
-              label="Puntuación promedio"
+              label={t("kpis.avgScore")}
               value={stats.scoreGlobal.toFixed(1)}
-              sub="sobre 10 puntos históricos"
+              sub={t("kpis.avgScoreSub")}
               accent
             />
             <KpiCard
               icon={<Repeat className="w-3.5 h-3.5 text-slate-500" />}
-              label="Tasa de recompra"
+              label={t("kpis.repurchase")}
               value={`${Math.round(stats.tasaVolveria * 100)}%`}
-              sub="volvería a pedir el gusto"
+              sub={t("kpis.repurchaseSub")}
             />
           </div>
 
@@ -408,14 +401,14 @@ export const KpisView: React.FC<KpisViewProps> = ({
             <div className="panel p-5 space-y-3">
               <h3 className="font-semibold text-slate-900 text-sm flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-slate-600" />
-                Historial de visitas mensual
+                {t("kpis.monthlyHistory")}
               </h3>
               <div className="h-60 relative w-full">
                 {visitasPorMesChartData ? (
                   <Line data={visitasPorMesChartData} options={chartOptions} />
                 ) : (
                   <div className="h-full flex items-center justify-center text-slate-400 text-xs">
-                    Sin evolución temporal disponible
+                    {t("kpis.noTemporal")}
                   </div>
                 )}
               </div>
@@ -425,7 +418,7 @@ export const KpisView: React.FC<KpisViewProps> = ({
             <div className="panel p-5 space-y-3">
               <h3 className="font-semibold text-slate-900 text-sm flex items-center gap-2">
                 <Star className="w-4 h-4 text-slate-600" />
-                Calificaciones promedio por categoría
+                {t("kpis.avgByCategory")}
               </h3>
               <div className="h-60 relative w-full">
                 <Bar data={scorePorCategoriaChartData} options={barChartOptions} />
@@ -441,7 +434,7 @@ export const KpisView: React.FC<KpisViewProps> = ({
             <div className="panel p-5 space-y-4">
               <div className="flex items-center gap-2">
                 <Trophy className="w-4 h-4 text-slate-600" />
-                <h3 className="font-semibold text-slate-900 text-sm">Puntuación por heladería</h3>
+                <h3 className="font-semibold text-slate-900 text-sm">{t("kpis.scoreByShop")}</h3>
               </div>
               <div className="space-y-3">
                 {stats.top5Heladerias.map((h, i) => (
@@ -450,12 +443,12 @@ export const KpisView: React.FC<KpisViewProps> = ({
                     label={`${i + 1}. ${h.nombre}`}
                     value={h.avg}
                     max={stats.maxScoreHel}
-                    sub={`${h.visitas} visita${h.visitas !== 1 ? "s" : ""}`}
+                    sub={plural("kpis.visits", h.visitas)}
                     accent={i === 0}
                   />
                 ))}
                 {stats.top5Heladerias.length === 0 && (
-                  <p className="text-sm text-slate-400 text-center py-4">No hay datos suficientes</p>
+                  <p className="text-sm text-slate-400 text-center py-4">{t("kpis.noData")}</p>
                 )}
               </div>
             </div>
@@ -464,7 +457,7 @@ export const KpisView: React.FC<KpisViewProps> = ({
             <div className="panel p-5 space-y-4">
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-slate-600" />
-                <h3 className="font-semibold text-slate-900 text-sm">Gustos más pedidos</h3>
+                <h3 className="font-semibold text-slate-900 text-sm">{t("kpis.mostOrdered")}</h3>
               </div>
               <div className="space-y-3">
                 {stats.top5Gustos.map((g, i) => (
@@ -473,12 +466,12 @@ export const KpisView: React.FC<KpisViewProps> = ({
                     label={`${i + 1}. ${g.gusto}`}
                     value={g.visitas}
                     max={stats.maxVisitasGusto}
-                    sub={`score prom. ${g.avg.toFixed(1)}`}
+                    sub={t("kpis.avgScoreShort", { n: g.avg.toFixed(1) })}
                     accent={i === 0}
                   />
                 ))}
                 {stats.top5Gustos.length === 0 && (
-                  <p className="text-sm text-slate-400 text-center py-4">No hay datos suficientes</p>
+                  <p className="text-sm text-slate-400 text-center py-4">{t("kpis.noData")}</p>
                 )}
               </div>
             </div>
@@ -488,40 +481,40 @@ export const KpisView: React.FC<KpisViewProps> = ({
         </div>
       ) : (
         <div className="panel p-8 text-center text-slate-500 text-sm">
-          No hay degustaciones registradas para el filtro seleccionado.
+          {t("kpis.noTastings")}
         </div>
       )}
 
       {/* Datos Curiosos (Globales) */}
       {globalCuriosities && (
         <div className="panel p-5 space-y-4">
-          <h3 className="font-semibold text-slate-900 text-sm">Datos curiosos globales</h3>
+          <h3 className="font-semibold text-slate-900 text-sm">{t("kpis.curiosities")}</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div className="space-y-1">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wide font-semibold">Categoría favorita</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wide font-semibold">{t("kpis.favCategory")}</p>
               <p className="text-sm font-semibold text-slate-800">
-                {globalCuriosities.catFavorita ? CAT_LABELS[globalCuriosities.catFavorita.cat] : "—"}
+                {globalCuriosities.catFavorita ? catLabel(globalCuriosities.catFavorita.cat) : "—"}
               </p>
               <p className="text-xs text-slate-500">
-                Promedio de {globalCuriosities.catFavorita?.avg.toFixed(1)} puntos
+                {t("kpis.favCategorySub", { n: globalCuriosities.catFavorita?.avg.toFixed(1) })}
               </p>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wide font-semibold">Categoría más pedida</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wide font-semibold">{t("kpis.mostOrderedCat")}</p>
               <p className="text-sm font-semibold text-slate-800">
-                {globalCuriosities.catMasPedida ? CAT_LABELS[globalCuriosities.catMasPedida.cat] : "—"}
+                {globalCuriosities.catMasPedida ? catLabel(globalCuriosities.catMasPedida.cat) : "—"}
               </p>
               <p className="text-xs text-slate-500">
-                {globalCuriosities.catMasPedida?.visitas} degustaciones
+                {plural("kpis.degustaciones", globalCuriosities.catMasPedida?.visitas ?? 0)}
               </p>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wide font-semibold">Gusto estrella</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wide font-semibold">{t("kpis.starFlavor")}</p>
               <p className="text-sm font-semibold text-slate-800">
                 {globalCuriosities.gustoEstrella?.gusto ?? "—"}
               </p>
               <p className="text-xs text-slate-500">
-                {globalCuriosities.gustoEstrella?.visitas} elecciones
+                {plural("kpis.elecciones", globalCuriosities.gustoEstrella?.visitas ?? 0)}
               </p>
             </div>
           </div>

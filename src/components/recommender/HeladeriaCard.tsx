@@ -1,6 +1,7 @@
 import React from "react";
 import { ResultadoRankeado, Antojo } from "../../types";
 import { MapPin, Footprints } from "lucide-react";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 interface HeladeriaCardProps {
   result: ResultadoRankeado;
@@ -15,6 +16,7 @@ export const HeladeriaCard: React.FC<HeladeriaCardProps> = ({
   selectedAntojos,
   onVerInsights,
 }) => {
+  const { t } = useLanguage();
   const { heladeria, distanciaMetros, scoreFinal } = result;
   const isTop = rank === 1;
 
@@ -24,7 +26,7 @@ export const HeladeriaCard: React.FC<HeladeriaCardProps> = ({
 
     // 1. Caminar poco
     if (distanciaMetros < 450) {
-      tags.push("Caminar poco");
+      tags.push(t("tag.walk"));
     }
 
     let sum = 0;
@@ -48,23 +50,23 @@ export const HeladeriaCard: React.FC<HeladeriaCardProps> = ({
 
     // 2. Calidad Top
     if (avgQuality >= 9.0) {
-      tags.push("Calidad Top");
+      tags.push(t("tag.topQuality"));
     }
 
     // 3. Equilibrio perfecto
     if (scoreFinal > 0.75 && distanciaMetros < 900 && avgQuality >= 7.8) {
-      tags.push("Equilibrio perfecto");
+      tags.push(t("tag.balance"));
     }
 
     // 4. Mejor en gusto específico
     if (maxAntojoScore >= 9.2 && maxAntojoName) {
       const label =
         maxAntojoName === "DULCE DE LECHE"
-          ? "DDL"
+          ? t("tag.ddl")
           : maxAntojoName === "AUTOR"
-          ? "Autor"
-          : maxAntojoName.toLowerCase();
-      tags.push(`Top ${label}`);
+          ? t("tag.autor")
+          : t(`craving.${maxAntojoName}`);
+      tags.push(t("tag.top", { label }));
     }
 
     // Devolver un set único para evitar repeticiones, máximo 2 tags
@@ -125,7 +127,7 @@ export const HeladeriaCard: React.FC<HeladeriaCardProps> = ({
           onClick={() => onVerInsights(heladeria.nombre)}
           className="text-xs text-slate-500 hover:text-slate-900 underline underline-offset-2 transition-colors cursor-pointer"
         >
-          Ver insights ({heladeria.visitas} visitas)
+          {t("card.insights", { n: heladeria.visitas })}
         </button>
       </div>
 

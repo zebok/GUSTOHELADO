@@ -12,8 +12,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "apple-touch-icon.png", "mask-icon.svg"],
       manifest: {
-        name: "Helado Finder CABA",
-        short_name: "HeladoFinder",
+        name: "GustoHelado — Bitácora Personal y Recomendador de Heladerías",
+        short_name: "GustoHelado",
         description: "Recomendador premium de heladerías en CABA según tu ubicación y antojo",
         theme_color: "#ffffff",
         background_color: "#ffffff",

@@ -1,26 +1,27 @@
 import React from "react";
 import { Antojo } from "../../types";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 interface CravingFilterProps {
   selectedAntojos: Antojo[];
   onAntojosChange: (antojos: Antojo[]) => void;
 }
 
-const clasicos: { value: Antojo; label: string }[] = [
-  { value: "CHOCOLATE", label: "Chocolate" },
-  { value: "DULCE DE LECHE", label: "Dulce de leche" },
-  { value: "CREMA", label: "Crema" },
-  { value: "FRUTA", label: "Fruta" },
+const clasicos: { value: Antojo }[] = [
+  { value: "CHOCOLATE" },
+  { value: "DULCE DE LECHE" },
+  { value: "CREMA" },
+  { value: "FRUTA" },
 ];
 
-const especiales: { value: Antojo; label: string }[] = [
-  { value: "AUTOR", label: "Sabores de autor" },
-];
+const especiales: { value: Antojo }[] = [{ value: "AUTOR" }];
 
 export const CravingFilter: React.FC<CravingFilterProps> = ({
   selectedAntojos,
   onAntojosChange,
 }) => {
+  const { t } = useLanguage();
+
   const handleToggle = (val: Antojo) => {
     const isSelected = selectedAntojos.includes(val);
     if (isSelected) {
@@ -30,7 +31,7 @@ export const CravingFilter: React.FC<CravingFilterProps> = ({
     }
   };
 
-  const renderButton = (item: { value: Antojo; label: string }) => {
+  const renderButton = (item: { value: Antojo }) => {
     const isSelected = selectedAntojos.includes(item.value);
     return (
       <button
@@ -42,7 +43,7 @@ export const CravingFilter: React.FC<CravingFilterProps> = ({
             : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
         }`}
       >
-        {item.label}
+        {t(`craving.${item.value}`)}
       </button>
     );
   };
@@ -51,17 +52,15 @@ export const CravingFilter: React.FC<CravingFilterProps> = ({
     <div className="panel p-4 space-y-4">
       <div>
         <h3 className="panel-label text-slate-700 font-semibold text-xs uppercase tracking-wider">
-          Experiencia deseada
+          {t("craving.title")}
         </h3>
-        <p className="text-xs text-slate-400 mt-0.5">
-          Selecciona las categorías que te interesan hoy.
-        </p>
+        <p className="text-xs text-slate-400 mt-0.5">{t("craving.subtitle")}</p>
       </div>
 
       <div className="space-y-3">
         <div className="space-y-1.5">
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
-            Línea clásica
+            {t("craving.classicLine")}
           </p>
           <div className="flex flex-wrap gap-2">
             {clasicos.map(renderButton)}
@@ -70,7 +69,7 @@ export const CravingFilter: React.FC<CravingFilterProps> = ({
 
         <div className="space-y-1.5">
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
-            Especiales
+            {t("craving.specials")}
           </p>
           <div className="flex flex-wrap gap-2">
             {especiales.map(renderButton)}

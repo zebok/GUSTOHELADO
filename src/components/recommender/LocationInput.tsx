@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { MapPin, Navigation, Search, CheckCircle } from "lucide-react";
 import { Ubicacion } from "../../types";
 import { geocodeDireccion } from "../../lib/geo";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 interface LocationInputProps {
   onLocationChange: (location: Ubicacion | null) => void;
@@ -12,13 +13,14 @@ export const LocationInput: React.FC<LocationInputProps> = ({
   onLocationChange,
   currentLocation,
 }) => {
+  const { t } = useLanguage();
   const [address, setAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleGPSClick = () => {
     if (!navigator.geolocation) {
-      setErrorMsg("Tu navegador no soporta geolocalización.");
+      setErrorMsg(t("location.error.noGeolocation"));
       return;
     }
 
@@ -32,11 +34,11 @@ export const LocationInput: React.FC<LocationInputProps> = ({
           lng: position.coords.longitude,
           origen: "gps",
         });
-        setAddress("Ubicación por GPS");
+        setAddress(t("location.gps"));
         setLoading(false);
       },
       () => {
-        setErrorMsg("No pudimos obtener tu ubicación. Probá con una dirección.");
+        setErrorMsg(t("location.error.gps"));
         setLoading(false);
       },
       { enableHighAccuracy: true, timeout: 10000 }
@@ -55,13 +57,13 @@ export const LocationInput: React.FC<LocationInputProps> = ({
       if (result) {
         onLocationChange(result);
         if (result.origen === "coords") {
-          setAddress(`Coordenadas: ${result.lat.toFixed(5)}, ${result.lng.toFixed(5)}`);
+          setAddress(t("location.coords", { lat: result.lat.toFixed(5), lng: result.lng.toFixed(5) }));
         }
       } else {
-        setErrorMsg("No encontramos esa dirección.");
+        setErrorMsg(t("location.error.notFound"));
       }
     } catch {
-      setErrorMsg("Error al buscar la dirección.");
+      setErrorMsg(t("location.error.search"));
     } finally {
       setLoading(false);
     }
@@ -70,11 +72,11 @@ export const LocationInput: React.FC<LocationInputProps> = ({
   return (
     <div className="panel p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="panel-label">Ubicación</h3>
+        <h3 className="panel-label">{t("location.title")}</h3>
         {currentLocation && (
           <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
             <CheckCircle className="w-3.5 h-3.5" />
-            Ubicado
+            {t("location.located")}
           </span>
         )}
       </div>
@@ -86,7 +88,7 @@ export const LocationInput: React.FC<LocationInputProps> = ({
             type="text"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
-            placeholder="Dirección en CABA..."
+            placeholder={t("location.placeholder")}
             className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 bg-white"
           />
         </div>
@@ -96,7 +98,7 @@ export const LocationInput: React.FC<LocationInputProps> = ({
             type="submit"
             disabled={loading || !address.trim()}
             className="px-3 py-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-40 cursor-pointer"
-            title="Buscar"
+            title={t("location.search")}
           >
             {loading ? (
               <div className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />

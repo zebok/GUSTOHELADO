@@ -6,11 +6,13 @@ import { RecommenderView } from "./components/recommender/RecommenderView";
 import { DatasetView } from "./components/dataset/DatasetView";
 import { KpisView } from "./components/kpis/KpisView";
 import { IntroScreen } from "./components/IntroScreen";
+import { useLanguage } from "./i18n/LanguageContext";
 import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
 
 export type Tab = "home" | "bbdd" | "kpis";
 
 export const App: React.FC = () => {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<Tab>("home");
   const [db, setDb] = useState<BaseDeDatos | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,9 +28,7 @@ export const App: React.FC = () => {
       setDb(data);
     } catch (err) {
       console.error(err);
-      setErrorMsg(
-        "No se pudieron cargar los datos. El pipeline de datos puede estar desactualizado."
-      );
+      setErrorMsg(t("common.loadError"));
     } finally {
       setLoading(false);
     }
@@ -50,7 +50,11 @@ export const App: React.FC = () => {
       {showIntro && <IntroScreen onClose={handleCloseIntro} />}
 
       {!showIntro && (
-        <TabBar activeTab={activeTab} setActiveTab={setActiveTab} />
+        <TabBar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          onShowIntro={() => setShowIntro(true)}
+        />
       )}
 
       {!showIntro && (
@@ -58,7 +62,7 @@ export const App: React.FC = () => {
           {loading ? (
             <div className="h-[50vh] flex flex-col items-center justify-center gap-3">
               <Loader2 className="w-6 h-6 text-slate-400 animate-spin" />
-              <p className="text-sm text-slate-400">Cargando datos...</p>
+              <p className="text-sm text-slate-400">{t("common.loading")}</p>
             </div>
           ) : errorMsg ? (
             <div className="h-[50vh] flex flex-col items-center justify-center gap-4 text-center max-w-sm mx-auto">
@@ -69,7 +73,7 @@ export const App: React.FC = () => {
                 className="flex items-center gap-1.5 text-sm font-medium text-slate-700 border border-slate-200 px-4 py-2 rounded-lg hover:bg-white cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                Reintentar
+                {t("common.retry")}
               </button>
             </div>
           ) : db ? (
