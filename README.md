@@ -1,56 +1,72 @@
-# GustoHelado — Bitácora Personal y Recomendador de Heladerías
+# GustoHelado — Personal Ice Cream Log & Recommender
 
-Acceso a la aplicación en vivo: https://zebok.github.io/GUSTOHELADO/
+[English](README.md) | [Español](README.es.md)
 
-Este proyecto nace de una motivación simple y cotidiana: mi pasión por el helado. Como argentino viviendo en la Ciudad de Buenos Aires, estoy rodeado de una oferta inmensa de heladerías nacionales, internacionales, artesanales y comerciales. Con el tiempo, y tras haber probado helados en distintas partes del mundo, desarrollé un paladar bastante crítico sobre el tema. No soy un crítico profesional, pero sé distinguir un sabor fiel de uno artificial y disfruto buscar la mejor experiencia de consumo posible.
+Live demo: https://zebok.github.io/GUSTOHELADO/
 
-Para resolver de manera metódica la pregunta de cuál es la menor distancia que puedo recorrer según mi antojo de helado actual y mi propio criterio de calidad, decidí registrar mis visitas e implementar esta herramienta.
+## About
 
----
+This project started with a simple, everyday motivation: my love for ice cream.
 
-## Propósito y Modelo de Recomendación
+I was born and raised in Buenos Aires, Argentina. I have also lived in other places and traveled a lot.
 
-La aplicación evalúa y ordena las heladerías activas cercanas calculando un puntaje compuesto (Blend Score) en tiempo real en el navegador:
+Buenos Aires is one of the cities with the best ice cream I have ever tasted. I am surrounded by an immense offering: national and international chains, artisanal and commercial shops. Over time, and after tasting ice cream around the world, I developed a fairly critical palate. I am not a professional critic, but I can tell a faithful flavor from an artificial one, and I enjoy chasing the best possible experience.
+
+One day, I started writing flavors down and rating them. Everywhere. Today, everything lives in a single Google Sheet. From that, like a curious kid with questions and answers, I built a website to speed up the logging process and share my recommendations with the world.
+
+This is my personal ice cream diary.
+
+## Features
+
+- **Craving-based recommender**: pick what you're in the mood for (chocolate, dulce de leche, creams, fruits, or signature flavors) and get ranked suggestions.
+- **Live location or manual input**: the app uses your GPS position, or a location you type in.
+- **Walk-radius control**: adjust the maximum distance and see what's nearby.
+- **Blend Score ranking**: results are ordered by a score computed in real time in the browser.
+- **Map view**: results plotted on an interactive map.
+- **Personal insights**: KPIs and interactive charts (Chart.js) that explore my tasting history.
+- **Open dataset**: browse the full database of shops and recorded tastings.
+
+## How recommendations work
+
+The app ranks nearby ice cream shops using a composite score, computed in real time in the browser:
+
+- **Historical Quality (70%)**: average of my personal ratings for the flavor category you chose (chocolate, dulce de leche, creams, fruits, or signature flavors).
+- **Geographic Proximity (30%)**: straight-line distance (Haversine formula) between my current location — from GPS or manual input — and the shop, normalized against your selected walk radius.
+
+## Architecture
+
+The data flow is designed to run with zero server and database costs:
 
 ```text
-Score Final = (Calidad Histórica * 0.7) + (Proximidad Geográfica * 0.3)
+Google Form (logging from the phone)
+   │
+   ▼
+Google Sheets (relational database and shop catalog)
+   │
+   ▼ (automated via GitHub Actions)
+ETL Pipeline (Python + Pandas: cleans and processes the data)
+   │
+   ▼
+Static JSON file (public/data/heladerias_prod.json)
+   │
+   ▼
+React app (filtering, geolocation, and real-time scoring)
 ```
 
-1. **Calidad Histórica (70%)**: Promedio de mis calificaciones personales para la categoría de sabor elegida (Chocolates, Dulces de Leche, Cremas, Frutas o Sabores de Autor).
-2. **Proximidad Geográfica (30%)**: Distancia lineal (usando la fórmula de Haversine) entre mi ubicación actual (obtenida por GPS o ingresada manualmente) y el local, normalizada en relación con el radio de caminata seleccionado.
+1. **Google Form & Sheets**: a Google Form, paired with an Apps Script, converts free text into identifiers and stores structured records in the occurrences sheet.
+2. **ETL Pipeline**: a Python script reads the sheet tabs, joins the data, computes averages, and generates a unified JSON file.
+3. **React frontend**: the app loads the static JSON and performs geolocation, filtering, and score calculation reactively — with no backend.
+
+
+## Key learnings
+
+This project was a hands-on exercise in:
+
+- Relational database design and normalization using Google Sheets.
+- Data ingestion and transformation (ETL) with Python and Pandas to generate clean, structured files.
+- Geolocation and distance calculation with direct math in JavaScript (Haversine formula).
+- Automation and continuous integration with GitHub Actions and Google Apps Script — without a dedicated backend.
 
 ---
 
-## Arquitectura del Sistema
-
-El flujo de datos está estructurado para operar sin costo de servidores ni bases de datos complejas:
-
-```text
-Google Form (Ingreso de datos desde celular)
-   │
-   ▼
-Google Sheets (Base de datos relacional y catálogo de locales)
-   │
-   ▼ (Automatizado mediante GitHub Actions semanal)
-ETL Pipeline (Script de Python y Pandas que procesa y limpia los datos)
-   │
-   ▼
-Archivo JSON Estático (public/data/heladerias_prod.json)
-   │
-   ▼
-Aplicación React (Filtros, cálculo geográfico y scoring en tiempo real)
-```
-
-1. **Google Form y Sheets**: Utilizo un formulario de Google que, mediante un script automatizado (Apps Script), convierte los textos ingresados en identificadores y los guarda de forma estructurada en la pestaña de ocurrencias de mi planilla.
-2. **ETL Pipeline**: Un script en Python lee las pestañas del Google Sheets, realiza los cruces de datos, calcula los promedios y genera un archivo JSON unificado.
-3. **Frontend React**: La aplicación web lee el archivo JSON estático y realiza de forma reactiva la geolocalización, el filtrado y el cálculo matemático del score de recomendación.
-
----
-
-## Aprendizajes Clave
-
-Durante el desarrollo de este proyecto, trabajé en los siguientes conceptos:
-- Diseño de bases de datos relacionales y normalización utilizando Google Sheets.
-- Ingesta y transformación de datos (ETL) con Python y Pandas para generar archivos estructurados limpios.
-- Integración de geolocalización y cálculo de distancias usando fórmulas matemáticas directas en JavaScript (fórmula de Haversine).
-- Automatización e integración continua mediante GitHub Actions y Google Apps Script sin depender de un backend dedicado.
+This is my ice cream diary. And my first data project.
