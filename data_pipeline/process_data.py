@@ -5,10 +5,43 @@ from datetime import datetime, timezone
 import pandas as pd
 
 
+def calcular_puntaje_ponderado(row):
+    """
+    Calcula el puntaje general ponderado (0.0 a 10.0):
+    40% Disfrutabilidad + 25% Textura/Conservación + 20% Fidelidad al Gusto + 15% Experiencia/Presentación
+    """
+    disf = pd.to_numeric(row.get("disfrutabilidad"), errors="coerce")
+    text = pd.to_numeric(row.get("textura_conservacion"), errors="coerce")
+    fid = pd.to_numeric(row.get("fidelidad_gusto"), errors="coerce")
+    exp = pd.to_numeric(row.get("experiencia_presentacion"), errors="coerce")
+
+    pesos = []
+    valores = []
+    if pd.notna(disf):
+        pesos.append(0.40)
+        valores.append(float(disf))
+    if pd.notna(text):
+        pesos.append(0.25)
+        valores.append(float(text))
+    if pd.notna(fid):
+        pesos.append(0.20)
+        valores.append(float(fid))
+    if pd.notna(exp):
+        pesos.append(0.15)
+        valores.append(float(exp))
+
+    if not pesos:
+        return None
+
+    total_peso = sum(pesos)
+    score = sum(w * v for w, v in zip(pesos, valores)) / total_peso
+    return round(score, 1)
+
+
 def normalizar_columnas_ocurrencias(ocurrencias_df):
     """
-    Normaliza las columnas de ocurrencias para que sean compatibles con el pipeline.
-    Soporta tanto datos del Apps Script (prod) como datos históricos del Sheets.
+    Normaliza las columnas de ocurrencias para que sean compatibles con el modelo
+    de clasificación (macrocategoria + subcategoria) y calificación (4 métricas + booleano).
     """
     ocurrencias_df.columns = [c.lower() for c in ocurrencias_df.columns]
 
@@ -17,20 +50,21 @@ def normalizar_columnas_ocurrencias(ocurrencias_df):
         rename_map["id_heladeria"] = "heladeria_id"
     if "id_categoria" in ocurrencias_df.columns:
         rename_map["id_categoria"] = "categoria_id"
+    if "puntaje_gusto" in ocurrencias_df.columns and "fidelidad_gusto" not in ocurrencias_df.columns:
+        rename_map["puntaje_gusto"] = "fidelidad_gusto"
+    if "puntaje_grupo" in ocurrencias_df.columns and "textura_conservacion" not in ocurrencias_df.columns:
+        rename_map["puntaje_grupo"] = "textura_conservacion"
     if rename_map:
         ocurrencias_df = ocurrencias_df.rename(columns=rename_map)
 
-    if "fidelidad_gusto" in ocurrencias_df.columns and "puntaje_gusto" not in ocurrencias_df.columns:
-        ocurrencias_df = ocurrencias_df.rename(columns={"fidelidad_gusto": "puntaje_gusto"})
+    if "experiencia_presentacion" not in ocurrencias_df.columns:
+        ocurrencias_df["experiencia_presentacion"] = ocurrencias_df.get("disfrutabilidad")
+
+    if "subcategoria" not in ocurrencias_df.columns:
+        ocurrencias_df["subcategoria"] = "CLASICO"
 
     if "puntaje_general" not in ocurrencias_df.columns:
-        metricas = [c for c in ["puntaje_gusto", "puntaje_grupo", "disfrutabilidad"] if c in ocurrencias_df.columns]
-        if not metricas:
-            raise ValueError(
-                "No se encontró ninguna columna de métricas en OCURRENCIAS. "
-                "Verificar que el Apps Script esté escribiendo correctamente."
-            )
-        ocurrencias_df["puntaje_general"] = ocurrencias_df[metricas].mean(axis=1).round(1)
+        ocurrencias_df["puntaje_general"] = ocurrencias_df.apply(calcular_puntaje_ponderado, axis=1)
 
     ocurrencias_df["puntaje_general"] = pd.to_numeric(ocurrencias_df["puntaje_general"], errors="coerce")
     ocurrencias_df = ocurrencias_df.dropna(subset=["puntaje_general"])
@@ -41,8 +75,6 @@ def normalizar_columnas_ocurrencias(ocurrencias_df):
 def process_data(heladerias_df, categorias_df, ocurrencias_df, output_path):
     """
     Realiza los joins y agrupaciones y exporta la base consolidada como JSON estático.
-    Incluye tanto el catálogo de heladerías (con scores por categoría) como el
-    listado completo de ocurrencias individuales enriquecidas con nombres.
     """
     print("Procesando datos (joins y agrupaciones)...")
 
@@ -56,17 +88,24 @@ def process_data(heladerias_df, categorias_df, ocurrencias_df, output_path):
     ocurrencias_df["heladeria_id"] = ocurrencias_df["heladeria_id"].astype(int)
     ocurrencias_df["categoria_id"] = ocurrencias_df["categoria_id"].astype(int)
 
-    # --- Lookup maps ---
     heladeria_nombre_map = dict(zip(heladerias_df["id"], heladerias_df["nombre"]))
+    heladeria_ciudad_map = dict(
+        zip(
+            heladerias_df["id"],
+            heladerias_df["ciudad"] if "ciudad" in heladerias_df.columns else ["Buenos Aires"] * len(heladerias_df),
+        )
+    )
+    heladeria_pais_map = dict(
+        zip(
+            heladerias_df["id"],
+            heladerias_df["pais"] if "pais" in heladerias_df.columns else ["Argentina"] * len(heladerias_df),
+        )
+    )
     categoria_macro_map = dict(zip(categorias_df["id"], categorias_df["macrocategoria"]))
 
-    # 1. Conteo de visitas por heladería
     visit_counts = ocurrencias_df.groupby("heladeria_id").size().to_dict()
-
-    # 2. Join ocurrencias ↔ categorías para obtener macroCategoria
     merged_df = ocurrencias_df.merge(categorias_df, left_on="categoria_id", right_on="id")
 
-    # 3. Score promedio por macroCategoria para cada heladería
     grouped = (
         merged_df
         .groupby(["heladeria_id", "macrocategoria"])["puntaje_general"]
@@ -82,7 +121,6 @@ def process_data(heladerias_df, categorias_df, ocurrencias_df, output_path):
         score = float(row["puntaje_general"])
         scores_dict.setdefault(hel_id, {})[category] = score
 
-    # 4. Construir lista final de heladerías (sin campo barrio)
     heladerias_list = []
     for _, row in heladerias_df.iterrows():
         hel_id = int(row["id"])
@@ -104,6 +142,8 @@ def process_data(heladerias_df, categorias_df, ocurrencias_df, output_path):
             "idCadena": id_cadena,
             "nombre": str(row["nombre"]),
             "direccion": str(row["direccion"]),
+            "ciudad": str(row.get("ciudad", "Buenos Aires")),
+            "pais": str(row.get("pais", "Argentina")),
             "lat": float(row["lat"]),
             "lng": float(row["lng"]),
             "activa": activa,
@@ -111,13 +151,11 @@ def process_data(heladerias_df, categorias_df, ocurrencias_df, output_path):
             "scorePorCategoria": scores_dict.get(hel_id, {}),
         })
 
-    # 5. Construir lista de ocurrencias enriquecidas con nombres
     ocurrencias_list = []
     for _, row in ocurrencias_df.iterrows():
         hel_id = int(row["heladeria_id"])
         cat_id = int(row["categoria_id"])
 
-        # Normalizar fecha
         fecha_raw = str(row.get("fecha", "")).strip()
         fecha_iso = ""
         for fmt in ["%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%d-%m-%Y"]:
@@ -129,40 +167,42 @@ def process_data(heladerias_df, categorias_df, ocurrencias_df, output_path):
         if not fecha_iso:
             fecha_iso = fecha_raw
 
-        # Volvería a pedir: normalizar a bool
         volveria_raw = str(row.get("volveria_a_pedir", "")).lower().strip()
         volveria = volveria_raw in ["true", "si", "sí", "1", "yes"]
 
-        puntaje_gusto = None
-        if "puntaje_gusto" in row.index:
-            val = pd.to_numeric(row["puntaje_gusto"], errors="coerce")
-            puntaje_gusto = float(val) if pd.notna(val) else None
+        def to_float_or_none(col_name):
+            if col_name in row.index:
+                val = pd.to_numeric(row[col_name], errors="coerce")
+                return round(float(val), 1) if pd.notna(val) else None
+            return None
 
-        puntaje_grupo = None
-        if "puntaje_grupo" in row.index:
-            val = pd.to_numeric(row["puntaje_grupo"], errors="coerce")
-            puntaje_grupo = float(val) if pd.notna(val) else None
+        disfrutabilidad = to_float_or_none("disfrutabilidad")
+        textura = to_float_or_none("textura_conservacion")
+        fidelidad = to_float_or_none("fidelidad_gusto")
+        experiencia = to_float_or_none("experiencia_presentacion")
 
-        disfrutabilidad = None
-        if "disfrutabilidad" in row.index:
-            val = pd.to_numeric(row["disfrutabilidad"], errors="coerce")
-            disfrutabilidad = float(val) if pd.notna(val) else None
+        subcat = str(row.get("subcategoria", "CLASICO")).strip().upper()
+        if subcat not in ["CLASICO", "SPRINKLES", "FUSION", "LIGHT"]:
+            subcat = "CLASICO"
 
         ocurrencias_list.append({
             "id": int(row["id"]) if "id" in row.index and pd.notna(row.get("id")) else len(ocurrencias_list) + 1,
             "fecha": fecha_iso,
             "heladeria_id": hel_id,
             "heladeria_nombre": heladeria_nombre_map.get(hel_id, f"ID {hel_id}"),
+            "ciudad": heladeria_ciudad_map.get(hel_id, "Buenos Aires"),
+            "pais": heladeria_pais_map.get(hel_id, "Argentina"),
             "gusto": str(row.get("gusto", "")).strip(),
             "macrocategoria": str(categoria_macro_map.get(cat_id, "MISC")).upper(),
-            "fidelidad_gusto": puntaje_gusto,
-            "puntaje_grupo": puntaje_grupo,
+            "subcategoria": subcat,
             "disfrutabilidad": disfrutabilidad,
+            "textura_conservacion": textura,
+            "fidelidad_gusto": fidelidad,
+            "experiencia_presentacion": experiencia,
             "volveria_a_pedir": volveria,
             "puntaje_general": float(row["puntaje_general"]),
         })
 
-    # Ordenar ocurrencias por fecha descendente
     ocurrencias_list.sort(key=lambda x: x["fecha"], reverse=True)
 
     output_data = {
@@ -222,7 +262,6 @@ def main():
         if "macro_categoria" in categorias_df.columns:
             categorias_df.rename(columns={"macro_categoria": "macrocategoria"}, inplace=True)
         elif "macrocategoria" not in categorias_df.columns:
-            # Try to find the right column
             for col in categorias_df.columns:
                 if "macro" in col.lower() or "categ" in col.lower():
                     categorias_df.rename(columns={col: "macrocategoria"}, inplace=True)
